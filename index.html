@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Resource Management System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top shadow-lg bg-gradient-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center" href="#">
+                <i class="bi bi-droplet-fill fs-3 me-2 text-light"></i>
+                <div>
+                    <div class="fw-bold">Water Resource Management</div>
+                    <small class="d-block opacity-75" style="font-size: 0.75rem;">Professional System</small>
+                </div>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" data-page="dashboard">
+                            <i class="bi bi-speedometer2"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-page="add-data">
+                            <i class="bi bi-plus-circle"></i> Data Entry
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-page="output">
+                            <i class="bi bi-file-earmark-text"></i> Reports
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-page="analytics">
+                            <i class="bi bi-graph-up"></i> Analytics
+                        </a>
+                    </li>
+                    <li class="nav-item ms-3">
+                        <button class="btn btn-light btn-sm" onclick="app.clearAllData()">
+                            <i class="bi bi-trash"></i> Clear
+                        </button>
+                    </li>
+                    <li class="nav-item ms-2">
+                        <span class="badge bg-light text-dark fs-6">
+                            <i class="bi bi-database"></i> <span id="totalReadings">0</span>
+                        </span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4" id="mainContent">
+        
+        <!-- Dashboard Page -->
+        <div id="dashboard-page" class="page-content active">
+            <div class="alert alert-info alert-dismissible fade show shadow-sm">
+                <i class="bi bi-info-circle"></i> <strong>System Status:</strong> Water quality monitoring system active.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <div class="row g-4 mb-4" id="metricCards"></div>
+
+            <div class="row g-4 mb-4">
+                <div class="col-lg-6">
+                    <div class="card shadow hover-lift">
+                        <div class="card-header text-white bg-gradient-success">
+                            <h5 class="mb-0"><i class="bi bi-clipboard-pulse"></i> Nutrient Analysis</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="nutrientBars"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card shadow hover-lift">
+                        <div class="card-header text-white bg-gradient-info">
+                            <h5 class="mb-0"><i class="bi bi-graph-up"></i> Parameter Trends</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="trendChart" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow hover-lift" id="latestReadingCard">
+                <div class="card-header text-white bg-gradient-primary">
+                    <h5 class="mb-0"><i class="bi bi-clock-history"></i> Latest Reading</h5>
+                </div>
+                <div class="card-body" id="latestDetails">
+                    <p class="text-muted text-center py-3">No readings available. Add data to begin monitoring.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Entry Page -->
+        <div id="add-data-page" class="page-content">
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    <div class="card shadow-lg border-0 hover-lift">
+                        <div class="card-header text-white bg-gradient-success">
+                            <h4 class="mb-0"><i class="bi bi-clipboard-data"></i> Data Entry</h4>
+                            <small class="opacity-75">Enter measurements manually or use USB sensor</small>
+                        </div>
+                        <div class="card-body p-4">
+                            
+                            <!-- USB Sensor Connection -->
+                            <div class="card mb-4 border-0 shadow-sm">
+                                <div class="card-header text-white bg-gradient-primary">
+                                    <h5 class="mb-1"><i class="bi bi-usb-symbol"></i> USB Sensor Connection</h5>
+                                    <small class="opacity-75">Connect water quality sensor via USB port</small>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-success shadow-sm">
+                                        <i class="bi bi-check-circle"></i>
+                                        <strong>Ready:</strong> Connect your water sensor and click the button below
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <button id="connectBtn" class="btn btn-outline-primary w-100 btn-lg shadow-sm">
+                                                <i class="bi bi-usb-plug"></i> Connect USB Sensor
+                                            </button>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <button id="readBtn" class="btn btn-success w-100 btn-lg shadow-sm" disabled>
+                                                <i class="bi bi-download"></i> Read Data
+                                            </button>
+                                        </div>
+                                        <div class="col-12">
+                                            <div id="sensorStatus" class="text-center p-3 bg-light rounded shadow-sm">
+                                                <i class="bi bi-usb text-muted"></i> Ready to connect
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Data Form -->
+                            <form id="readingForm">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Location <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control form-control-lg shadow-sm" id="location" placeholder="e.g., Station A, River Delta" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">pH Level <span class="text-danger">*</span></label>
+                                        <input type="number" class="form-control form-control-lg shadow-sm" id="ph" step="0.01" min="0" max="14" placeholder="6.5 - 8.5" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Hydrogen Sulfide <span class="text-danger">*</span></label>
+                                        <input type="number" class="form-control form-control-lg shadow-sm" id="hydrogenSulfide" step="0.01" min="0" placeholder="0.05 - 0.1" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Turbidity <span class="text-danger">*</span></label>
+                                        <input type="number" class="form-control form-control-lg shadow-sm" id="turbidity" step="0.01" min="0" placeholder="0 - 5" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Nitrogen <span class="text-danger">*</span></label>
+                                        <input type="number" class="form-control form-control-lg shadow-sm" id="nitrogen" step="0.01" min="0" placeholder="0 - 10" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Copper <span class="text-danger">*</span></label>
+                                        <input type="number" class="form-control form-control-lg shadow-sm" id="copper" step="0.01" min="0" placeholder="0.05 - 2.0" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Dissolved Oxygen <span class="text-danger">*</span></label>
+                                        <input type="number" class="form-control form-control-lg shadow-sm" id="dissolvedOxygen" step="0.01" min="0" placeholder="5 - 14" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Temperature (°C) <span class="text-danger">*</span></label>
+                                        <input type="number" class="form-control form-control-lg shadow-sm" id="temperature" step="0.01" placeholder="15 - 30" required>
+                                    </div>
+                                </div>
+                                <div class="mt-4 d-grid">
+                                    <button type="submit" class="btn btn-primary btn-lg shadow">
+                                        <i class="bi bi-save"></i> Save Water Quality Reading
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports Page -->
+        <div id="output-page" class="page-content">
+            <div class="card shadow hover-lift mb-4">
+                <div class="card-header text-white d-flex justify-content-between align-items-center bg-gradient-primary">
+                    <h4 class="mb-0"><i class="bi bi-file-earmark-text"></i> Water Quality Reports</h4>
+                    <button class="btn btn-success shadow-sm" onclick="app.exportData()">
+                        <i class="bi bi-download"></i> Export Data
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <div class="card text-white hover-lift bg-gradient-primary">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title opacity-75">Total Records</h6>
+                                    <h2 class="display-4 mb-0" id="totalRecords">0</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card text-white hover-lift bg-gradient-success">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title opacity-75">Normal Readings</h6>
+                                    <h2 class="display-4 mb-0" id="normalRecords">0</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card text-white hover-lift bg-gradient-danger">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title opacity-75">Alert Readings</h6>
+                                    <h2 class="display-4 mb-0" id="alertRecords">0</h2>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="outputList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Page -->
+        <div id="analytics-page" class="page-content">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card border-0 shadow-lg">
+                        <div class="card-header bg-gradient-primary text-white py-3">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-graph-up-arrow me-2"></i>
+                                <h5 class="mb-0">Water Quality Analytics Dashboard</h5>
+                            </div>
+                        </div>
+                        <div class="card-body py-4">
+                            <div id="statisticalSummary"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4 mb-4">
+                <div class="col-lg-4 col-md-6">
+                    <div class="card border-0 shadow h-100">
+                        <div class="card-header bg-gradient-info text-white py-3">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-droplet-fill me-2"></i>
+                                <h6 class="mb-0">pH Level</h6>
+                            </div>
+                        </div>
+                        <div class="card-body p-3">
+                            <canvas id="phChart" height="140"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <div class="card border-0 shadow h-100">
+                        <div class="card-header bg-gradient-success text-white py-3">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-thermometer-half me-2"></i>
+                                <h6 class="mb-0">Temperature</h6>
+                            </div>
+                        </div>
+                        <div class="card-body p-3">
+                            <canvas id="temperatureChart" height="140"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <div class="card border-0 shadow h-100">
+                        <div class="card-header bg-gradient-primary text-white py-3">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-water me-2"></i>
+                                <h6 class="mb-0">Dissolved Oxygen</h6>
+                            </div>
+                        </div>
+                        <div class="card-body p-3">
+                            <canvas id="oxygenChart" height="140"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <div class="card border-0 shadow h-100">
+                        <div class="card-header bg-gradient-danger text-white py-3">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-cloud-haze me-2"></i>
+                                <h6 class="mb-0">Turbidity</h6>
+                            </div>
+                        </div>
+                        <div class="card-body p-3">
+                            <canvas id="turbidityChart" height="140"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <div class="card border-0 shadow h-100">
+                        <div class="card-header bg-gradient-warning text-white py-3">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-flask me-2"></i>
+                                <h6 class="mb-0">Hydrogen Sulfide</h6>
+                            </div>
+                        </div>
+                        <div class="card-body p-3">
+                            <canvas id="hydrogenSulfideChart" height="140"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <div class="card border-0 shadow h-100">
+                        <div class="card-header bg-gradient-secondary text-white py-3">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-circle me-2"></i>
+                                <h6 class="mb-0">Nitrogen</h6>
+                            </div>
+                        </div>
+                        <div class="card-body p-3">
+                            <canvas id="nitrogenChart" height="140"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <div class="card border-0 shadow h-100">
+                        <div class="card-header bg-gradient-dark text-white py-3">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-hexagon me-2"></i>
+                                <h6 class="mb-0">Copper</h6>
+                            </div>
+                        </div>
+                        <div class="card-body p-3">
+                            <canvas id="copperChart" height="140"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4 mb-4">
+                <div class="col-lg-8">
+                    <div class="card border-0 shadow-lg h-100">
+                        <div class="card-header bg-gradient-success text-white py-3">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-pie-chart me-2"></i>
+                                <h5 class="mb-0">Parameter Distribution</h5>
+                            </div>
+                        </div>
+                        <div class="card-body p-4">
+                            <canvas id="distributionChart" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-lg h-100">
+                        <div class="card-header bg-gradient-info text-white py-3">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-speedometer2 me-2"></i>
+                                <h5 class="mb-0">Real-time Gauges</h5>
+                            </div>
+                        </div>
+                        <div class="card-body p-2">
+                            <div class="row g-2 h-100">
+                                <div class="col-6">
+                                    <div class="text-center p-2 bg-light rounded h-100 d-flex flex-column justify-content-center">
+                                        <canvas id="phGauge" width="70" height="70"></canvas>
+                                        <small class="fw-bold mt-1">pH</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center p-2 bg-light rounded h-100 d-flex flex-column justify-content-center">
+                                        <canvas id="tempGauge" width="70" height="70"></canvas>
+                                        <small class="fw-bold mt-1">Temp</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center p-2 bg-light rounded h-100 d-flex flex-column justify-content-center">
+                                        <canvas id="oxygenGauge" width="70" height="70"></canvas>
+                                        <small class="fw-bold mt-1">O₂</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center p-2 bg-light rounded h-100 d-flex flex-column justify-content-center">
+                                        <canvas id="turbidityGauge" width="70" height="70"></canvas>
+                                        <small class="fw-bold mt-1">Turbidity</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-lg h-100">
+                        <div class="card-header bg-gradient-secondary text-white py-3">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-diagram-3 me-2"></i>
+                                <h5 class="mb-0">Parameter Correlations</h5>
+                            </div>
+                        </div>
+                        <div class="card-body p-4">
+                            <div id="correlationAnalysis" class="w-100"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-lg h-100">
+                        <div class="card-header bg-gradient-dark text-white py-3">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-award me-2"></i>
+                                <h5 class="mb-0">Quality Assessment</h5>
+                            </div>
+                        </div>
+                        <div class="card-body p-4 d-flex align-items-center justify-content-center">
+                            <div id="qualityAssessment" class="w-100 text-center"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <footer class="text-white py-4 mt-5 bg-gradient-primary">
+        <div class="container text-center">
+            <p class="mb-2">&copy; 2024 Water Resource Management System</p>
+            <p class="opacity-75 small mb-0">Professional Water Quality Monitoring</p>
+        </div>
+    </footer>
+
+    <div id="notification" class="alert alert-dismissible fade shadow" role="alert" style="position: fixed; top: 80px; right: 20px; z-index: 1050; min-width: 300px; display: none;">
+        <div class="d-flex align-items-center">
+            <i id="notificationIcon" class="me-2"></i>
+            <span id="notificationMessage"></span>
+        </div>
+        <button type="button" class="btn-close" onclick="ui.hideNotification()"></button>
+    </div>
+
+    <div id="loadingSpinner" class="d-none position-fixed top-50 start-50 translate-middle">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="config.js"></script>
+    <script src="simple-sensor.js"></script>
+    <script src="ui.js"></script>
+    <script src="charts.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
