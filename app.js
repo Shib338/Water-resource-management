@@ -226,6 +226,13 @@ const app = {
     },
 
     exportData() {
+        // Check if admin is logged in
+        if (!Auth.isLoggedIn) {
+            ui.showNotification('Admin login required to export data!', 'error');
+            Auth.showLoginModal();
+            return;
+        }
+
         if (this.readings.length === 0) {
             ui.showNotification('No data available to export', 'warning');
             return;
@@ -258,6 +265,13 @@ const app = {
     },
 
     async clearAllData() {
+        // Check if admin is logged in
+        if (!Auth.isLoggedIn) {
+            ui.showNotification('Admin login required to delete data!', 'error');
+            Auth.showLoginModal();
+            return;
+        }
+
         const totalInCloud = (await FirebaseDB.loadReadings()).length;
         
         if (totalInCloud === 0) {

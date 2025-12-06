@@ -1,38 +1,4 @@
-# Dependencies
 node_modules/
-package-lock.json
-
-# Environment variables
-.env
-.env.local
-
-# Build files
-dist/
-build/
-
-# IDE files
 .vscode/
-.idea/
-*.swp
-*.swo
-
-# OS files
 .DS_Store
-Thumbs.db
-
-# Logs
 *.log
-logs/
-
-# Database files
-*.db
-*.sqlite
-
-# Backup files
-*-backup.*
-*-old.*
-*.bak
-
-# Test files
-test-*.html
-*-test.*
