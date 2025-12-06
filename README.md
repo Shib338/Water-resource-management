@@ -156,11 +156,13 @@ Water resource management/
 
 ## 💾 Data Management
 
-### **Local Storage**
-- All data stored in browser localStorage
-- Automatic data persistence
-- No external database required
-- Privacy-focused design
+### **Cloud Database (Firebase)**
+- Data stored in Firebase Firestore (Google Cloud)
+- Accessible from anywhere with internet
+- Automatic backups and synchronization
+- Enterprise-grade reliability
+- Free tier: 1GB storage, 50K reads/day
+- Fallback to localStorage if Firebase not configured
 
 ### **Export Options**
 - JSON format for data analysis
@@ -173,6 +175,38 @@ Water resource management/
 - Range checking for all parameters
 - Required field enforcement
 - Professional error handling
+
+## 🔐 Database Access (For Developers)
+
+### **Admin Panel**
+- Click "Admin" button in navigation
+- View all readings in table format
+- Search and filter data
+- View detailed reading information
+- Delete individual readings
+- Export data to JSON
+- Clear all data (with confirmation)
+
+### **Firebase Console Access**
+1. Go to https://console.firebase.google.com/
+2. Login with your Google account
+3. Select your project
+4. Navigate to "Firestore Database"
+5. View/edit/delete data directly
+
+### **Browser Console Access**
+```javascript
+// View all data
+FirebaseDB.loadReadings().then(data => console.table(data));
+
+// Delete specific reading
+FirebaseDB.deleteReading('DOCUMENT_ID');
+
+// Clear all data
+FirebaseDB.clearAllData();
+```
+
+See **DATABASE_ACCESS_GUIDE.md** for complete developer documentation.
 
 ## 🔧 Configuration
 

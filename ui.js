@@ -3,41 +3,32 @@
  */
 
 const ui = {
-    currentPage: 'dashboard',
-
-    // Initialize UI
     init() {
         this.setupNavigation();
-        this.updateDashboard([]);
     },
 
-    // Setup navigation
     setupNavigation() {
-        document.querySelectorAll('.nav-link').forEach(link => {
+        document.querySelectorAll('.nav-link[data-page]').forEach(link => {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
                 const page = e.currentTarget.dataset.page;
                 if (page) {
-                    this.showPage(page);
+                    app.showPage(page);
                 }
             });
         });
     },
 
-    // Show specific page
     showPage(pageId) {
-        // Hide all pages
         document.querySelectorAll('.page-content').forEach(page => {
             page.classList.remove('active');
         });
 
-        // Show selected page
         const targetPage = document.getElementById(`${pageId}-page`);
         if (targetPage) {
             targetPage.classList.add('active');
         }
 
-        // Update navigation
         document.querySelectorAll('.nav-link').forEach(link => {
             link.classList.remove('active');
         });
@@ -47,360 +38,10 @@ const ui = {
             activeLink.classList.add('active');
         }
 
-        this.currentPage = pageId;
-
-        // Update page content
-        if (pageId === 'output') {
-            this.updateReports();
-        } else if (pageId === 'analytics') {
-            this.updateAnalytics();
-        }
+        if (pageId === 'output') app.updateReports();
+        if (pageId === 'analytics') app.updateAnalytics();
     },
 
-    // Update dashboard
-    updateDashboard(readings) {
-        try {
-            this.updateMetricCards(readings);
-            this.updateLatestReading(readings);
-            this.updateTotalReadings(readings.length);
-            
-            // Update charts if available
-            if (typeof charts !== 'undefined' && charts.updateCharts) {
-                setTimeout(() => {
-                    charts.updateCharts(readings);
-                }, 100);
-            }
-        } catch (error) {
-            console.error('Dashboard update error:', error);
-            this.showNotification('Error updating dashboard', 'warning');
-        }
-    },
-
-    // Update metric cards
-    updateMetricCards(readings) {
-        const container = document.getElementById('metricCards');
-        if (!container) return;
-
-        if (readings.length === 0) {
-            container.innerHTML = `
-                <div class="col-12">
-                    <div class="card shadow hover-lift">
-                        <div class="card-body text-center py-5">
-                            <i class="bi bi-droplet display-1 text-muted mb-3"></i>
-                            <h4 class="text-muted">No Data Available</h4>
-                            <p class="text-muted">Add water quality readings to see metrics</p>
-                            <button class="btn btn-primary" onclick="ui.showPage('add-data')">
-                                <i class="bi bi-plus-circle"></i> Add Data
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            return;
-        }
-
-        const latest = readings[readings.length - 1];
-        const metrics = [
-            { name: 'pH Level', value: latest.ph, icon: 'droplet', color: 'primary' },
-            { name: 'Temperature', value: `${latest.temperature}°C`, icon: 'thermometer', color: 'success' },
-            { name: 'Dissolved O₂', value: `${latest.dissolvedOxygen} mg/L`, icon: 'water', color: 'info' },
-            { name: 'Turbidity', value: `${latest.turbidity} NTU`, icon: 'cloud-haze', color: 'warning' }
-        ];
-
-        container.innerHTML = metrics.map(metric => `
-            <div class="col-lg-3 col-md-6">
-                <div class="card shadow hover-lift text-white" style="background: var(--${metric.color}-gradient);">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="opacity-75">${metric.name}</h6>
-                                <h3 class="mb-0">${metric.value}</h3>
-                            </div>
-                            <i class="bi bi-${metric.icon} fs-1 opacity-50"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-    },
-
-    // Update latest reading
-    updateLatestReading(readings) {
-        const container = document.getElementById('latestDetails');
-        if (!container) return;
-
-        if (readings.length === 0) {
-            container.innerHTML = '<p class="text-muted text-center py-3">No readings available. Add data to begin monitoring.</p>';
-            return;
-        }
-
-        const latest = readings[readings.length - 1];
-        container.innerHTML = `
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-geo-alt text-primary me-2"></i>
-                        <div>
-                            <small class="text-muted">Location</small>
-                            <div class="fw-bold">${latest.location}</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-clock text-primary me-2"></i>
-                        <div>
-                            <small class="text-muted">Time</small>
-                            <div class="fw-bold">${latest.time}</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="text-center p-2 bg-light rounded">
-                        <small class="text-muted">pH</small>
-                        <div class="fw-bold">${latest.ph}</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="text-center p-2 bg-light rounded">
-                        <small class="text-muted">Temp</small>
-                        <div class="fw-bold">${latest.temperature}°C</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="text-center p-2 bg-light rounded">
-                        <small class="text-muted">DO</small>
-                        <div class="fw-bold">${latest.dissolvedOxygen}</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="text-center p-2 bg-light rounded">
-                        <small class="text-muted">Turbidity</small>
-                        <div class="fw-bold">${latest.turbidity}</div>
-                    </div>
-                </div>
-            </div>
-        `;
-    },
-
-    // Update reports section
-    updateReports() {
-        const readings = app.readings || [];
-        
-        // Update summary cards
-        document.getElementById('totalRecords').textContent = readings.length;
-        document.getElementById('normalRecords').textContent = readings.filter(r => this.isNormal(r)).length;
-        document.getElementById('alertRecords').textContent = readings.filter(r => !this.isNormal(r)).length;
-
-        // Update reports list
-        const container = document.getElementById('outputList');
-        if (!container) return;
-
-        if (readings.length === 0) {
-            container.innerHTML = `
-                <div class="card shadow hover-lift">
-                    <div class="card-body text-center py-5">
-                        <i class="bi bi-file-earmark-text display-1 text-muted mb-3"></i>
-                        <h4 class="text-muted">No Reports Available</h4>
-                        <p class="text-muted">Add water quality data to generate reports</p>
-                        <button class="btn btn-primary" onclick="ui.showPage('add-data')">
-                            <i class="bi bi-plus-circle"></i> Add Data
-                        </button>
-                    </div>
-                </div>
-            `;
-            return;
-        }
-
-        // Group readings by location
-        const locationGroups = {};
-        readings.forEach(reading => {
-            if (!locationGroups[reading.location]) {
-                locationGroups[reading.location] = [];
-            }
-            locationGroups[reading.location].push(reading);
-        });
-
-        container.innerHTML = `
-            <div class="row g-4">
-                ${Object.entries(locationGroups).map(([location, locationReadings]) => `
-                    <div class="col-lg-6">
-                        <div class="card shadow hover-lift">
-                            <div class="card-header text-white d-flex justify-content-between align-items-center" style="background: var(--primary-gradient);">
-                                <h6 class="mb-0"><i class="bi bi-geo-alt"></i> ${location}</h6>
-                                <span class="badge bg-light text-dark">${locationReadings.length} readings</span>
-                            </div>
-                            <div class="card-body">
-                                <div class="row g-2 mb-3">
-                                    <div class="col-6">
-                                        <div class="text-center p-2 bg-success bg-opacity-10 rounded">
-                                            <small class="text-success">Normal</small>
-                                            <div class="fw-bold text-success">${locationReadings.filter(r => this.isNormal(r)).length}</div>
-                                        </div>
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="text-center p-2 bg-danger bg-opacity-10 rounded">
-                                            <small class="text-danger">Alerts</small>
-                                            <div class="fw-bold text-danger">${locationReadings.filter(r => !this.isNormal(r)).length}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="latest-reading">
-                                    <small class="text-muted">Latest Reading:</small>
-                                    <div class="mt-1">
-                                        <div class="d-flex justify-content-between">
-                                            <span>pH: <strong>${locationReadings[locationReadings.length - 1].ph}</strong></span>
-                                            <span>Temp: <strong>${locationReadings[locationReadings.length - 1].temperature}°C</strong></span>
-                                        </div>
-                                        <div class="d-flex justify-content-between mt-1">
-                                            <span>DO: <strong>${locationReadings[locationReadings.length - 1].dissolvedOxygen}</strong></span>
-                                            <span>Turbidity: <strong>${locationReadings[locationReadings.length - 1].turbidity}</strong></span>
-                                        </div>
-                                        <small class="text-muted">${locationReadings[locationReadings.length - 1].date} ${locationReadings[locationReadings.length - 1].time}</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-            
-            <div class="card shadow hover-lift mt-4">
-                <div class="card-header text-white" style="background: var(--info-gradient);">
-                    <h5 class="mb-0"><i class="bi bi-list-ul"></i> Recent Readings</h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Date/Time</th>
-                                    <th>Location</th>
-                                    <th>pH</th>
-                                    <th>Temperature</th>
-                                    <th>DO</th>
-                                    <th>Turbidity</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${readings.slice(-10).reverse().map(reading => `
-                                    <tr>
-                                        <td>
-                                            <small>${reading.date}<br>${reading.time}</small>
-                                        </td>
-                                        <td>${reading.location}</td>
-                                        <td>${reading.ph}</td>
-                                        <td>${reading.temperature}°C</td>
-                                        <td>${reading.dissolvedOxygen}</td>
-                                        <td>${reading.turbidity}</td>
-                                        <td>
-                                            <span class="badge ${this.isNormal(reading) ? 'bg-success' : 'bg-danger'}">
-                                                ${this.isNormal(reading) ? 'Normal' : 'Alert'}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        `;
-    },
-
-    // Check if reading is normal
-    isNormal(reading) {
-        return reading.ph >= 6.5 && reading.ph <= 8.5 &&
-               reading.temperature >= 15 && reading.temperature <= 30 &&
-               reading.dissolvedOxygen >= 5 && reading.dissolvedOxygen <= 14 &&
-               reading.turbidity >= 0 && reading.turbidity <= 5;
-    },
-
-    // Update analytics
-    updateAnalytics() {
-        try {
-            const readings = app.readings || [];
-            const summaryElement = document.getElementById('statisticalSummary');
-            
-            if (!summaryElement) return;
-            
-            if (readings.length === 0) {
-                summaryElement.innerHTML = `
-                    <div class="text-center py-3">
-                        <i class="bi bi-graph-up fs-1 text-muted mb-2"></i>
-                        <h6 class="text-muted">No Analytics Available</h6>
-                        <small class="text-muted">Add water quality data to see analytics</small>
-                    </div>
-                `;
-                return;
-            }
-
-            // Calculate statistics
-            const stats = this.calculateStats(readings);
-            
-            summaryElement.innerHTML = `
-                <div class="row g-2">
-                    <div class="col-3">
-                        <div class="text-center p-2 bg-primary bg-opacity-10 rounded">
-                            <h5 class="text-primary mb-0">${readings.length}</h5>
-                            <small class="text-muted">Readings</small>
-                        </div>
-                    </div>
-                    <div class="col-3">
-                        <div class="text-center p-2 bg-success bg-opacity-10 rounded">
-                            <h5 class="text-success mb-0">${stats.avgPH}</h5>
-                            <small class="text-muted">Avg pH</small>
-                        </div>
-                    </div>
-                    <div class="col-3">
-                        <div class="text-center p-2 bg-info bg-opacity-10 rounded">
-                            <h5 class="text-info mb-0">${stats.avgTemp}°C</h5>
-                            <small class="text-muted">Avg Temp</small>
-                        </div>
-                    </div>
-                    <div class="col-3">
-                        <div class="text-center p-2 bg-warning bg-opacity-10 rounded">
-                            <h5 class="text-warning mb-0">${stats.avgDO}</h5>
-                            <small class="text-muted">Avg DO</small>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            // Update charts if available
-            if (typeof charts !== 'undefined' && charts.updateCharts) {
-                setTimeout(() => {
-                    charts.updateCharts(readings);
-                }, 100);
-            }
-        } catch (error) {
-            console.error('Analytics update error:', error);
-            const summaryElement = document.getElementById('statisticalSummary');
-            if (summaryElement) {
-                summaryElement.innerHTML = '<div class="text-center text-danger"><small>Error loading analytics</small></div>';
-            }
-        }
-    },
-
-    // Calculate statistics
-    calculateStats(readings) {
-        const avgPH = (readings.reduce((sum, r) => sum + r.ph, 0) / readings.length).toFixed(1);
-        const avgTemp = (readings.reduce((sum, r) => sum + r.temperature, 0) / readings.length).toFixed(1);
-        const avgDO = (readings.reduce((sum, r) => sum + r.dissolvedOxygen, 0) / readings.length).toFixed(1);
-        
-        return { avgPH, avgTemp, avgDO };
-    },
-
-    // Update total readings counter
-    updateTotalReadings(count) {
-        const element = document.getElementById('totalReadings');
-        if (element) {
-            element.textContent = count;
-        }
-    },
-
-    // Show notification
     showNotification(message, type = 'info') {
         const notification = document.getElementById('notification');
         const icon = document.getElementById('notificationIcon');
@@ -415,16 +56,9 @@ const ui = {
             info: 'bi-info-circle-fill text-info'
         };
         
-        const classes = {
-            success: 'alert-success',
-            error: 'alert-danger',
-            warning: 'alert-warning',
-            info: 'alert-info'
-        };
-        
         icon.className = `bi ${icons[type] || icons.info}`;
         text.textContent = message;
-        notification.className = `alert alert-dismissible fade show shadow ${classes[type] || classes.info}`;
+        notification.className = `alert alert-dismissible fade show shadow alert-${type}`;
         notification.style.display = 'block';
         
         setTimeout(() => {
@@ -432,7 +66,6 @@ const ui = {
         }, 5000);
     },
 
-    // Hide notification
     hideNotification() {
         const notification = document.getElementById('notification');
         if (notification) {
@@ -440,22 +73,221 @@ const ui = {
         }
     },
 
-    // Show loading
-    showLoading() {
-        const spinner = document.getElementById('loadingSpinner');
-        if (spinner) {
-            spinner.classList.remove('d-none');
-        }
-    },
-
-    // Hide loading
-    hideLoading() {
-        const spinner = document.getElementById('loadingSpinner');
-        if (spinner) {
-            spinner.classList.add('d-none');
+    updateDashboard(readings) {
+        const metricCards = document.getElementById('metricCards');
+        const latestDetails = document.getElementById('latestDetails');
+        const nutrientBars = document.getElementById('nutrientBars');
+        const trendChart = document.getElementById('trendChart');
+        
+        if (readings && readings.length > 0) {
+            const latest = readings[readings.length - 1];
+            
+            if (metricCards) {
+                metricCards.innerHTML = `
+                    <div class="col-md-3">
+                        <div class="card text-white bg-gradient-primary">
+                            <div class="card-body text-center">
+                                <h3>${latest.ph?.toFixed(2) || 'N/A'}</h3>
+                                <p class="mb-0">pH Level</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-white bg-gradient-success">
+                            <div class="card-body text-center">
+                                <h3>${latest.temperature?.toFixed(1) || 'N/A'}°C</h3>
+                                <p class="mb-0">Temperature</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-white bg-gradient-info">
+                            <div class="card-body text-center">
+                                <h3>${latest.dissolvedOxygen?.toFixed(2) || 'N/A'}</h3>
+                                <p class="mb-0">Dissolved O₂ (mg/L)</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-white bg-gradient-warning">
+                            <div class="card-body text-center">
+                                <h3>${latest.turbidity?.toFixed(2) || 'N/A'}</h3>
+                                <p class="mb-0">Turbidity (NTU)</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if (latestDetails && latest) {
+                latestDetails.innerHTML = `
+                    <div class="card border-0 bg-light mb-3">
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <h6 class="text-primary"><i class="bi bi-geo-alt"></i> Location</h6>
+                                    <p class="fs-5 mb-0">${latest.location}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-primary"><i class="bi bi-clock"></i> Time</h6>
+                                    <p class="fs-5 mb-0">${new Date(latest.timestamp).toLocaleString()}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="card border-primary">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted mb-2">pH Level</h6>
+                                    <h3 class="text-primary mb-0">${latest.ph?.toFixed(2)}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-success">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted mb-2">Temperature</h6>
+                                    <h3 class="text-success mb-0">${latest.temperature?.toFixed(1)}°C</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-info">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted mb-2">Dissolved Oxygen</h6>
+                                    <h3 class="text-info mb-0">${latest.dissolvedOxygen?.toFixed(2)} mg/L</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-danger">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted mb-2">Turbidity</h6>
+                                    <h3 class="text-danger mb-0">${latest.turbidity?.toFixed(2)} NTU</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-warning">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted mb-2">Hydrogen Sulfide</h6>
+                                    <h3 class="text-warning mb-0">${latest.hydrogenSulfide?.toFixed(3)} mg/L</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-secondary">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted mb-2">Nitrogen</h6>
+                                    <h3 class="text-secondary mb-0">${latest.nitrogen?.toFixed(2)} mg/L</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-dark">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted mb-2">Copper</h6>
+                                    <h3 class="text-dark mb-0">${latest.copper?.toFixed(2)} mg/L</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Update Nutrient Analysis
+            if (nutrientBars) {
+                nutrientBars.innerHTML = `
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span><strong>Nitrogen</strong></span>
+                            <span>${latest.nitrogen?.toFixed(2)} mg/L</span>
+                        </div>
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar bg-success" style="width: ${(latest.nitrogen / 10) * 100}%">${latest.nitrogen?.toFixed(2)}</div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span><strong>Copper</strong></span>
+                            <span>${latest.copper?.toFixed(2)} mg/L</span>
+                        </div>
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar bg-warning" style="width: ${(latest.copper / 2) * 100}%">${latest.copper?.toFixed(2)}</div>
+                        </div>
+                    </div>
+                    <div class="mb-0">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span><strong>Hydrogen Sulfide</strong></span>
+                            <span>${latest.hydrogenSulfide?.toFixed(3)} mg/L</span>
+                        </div>
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar bg-danger" style="width: ${(latest.hydrogenSulfide / 0.1) * 100}%">${latest.hydrogenSulfide?.toFixed(3)}</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Update Parameter Trends Chart
+            if (trendChart && typeof Chart !== 'undefined') {
+                const ctx = trendChart.getContext('2d');
+                if (window.dashboardTrendChart) {
+                    window.dashboardTrendChart.destroy();
+                }
+                
+                const labels = readings.slice(-10).map(r => new Date(r.timestamp).toLocaleTimeString());
+                const phData = readings.slice(-10).map(r => r.ph);
+                const tempData = readings.slice(-10).map(r => r.temperature);
+                
+                window.dashboardTrendChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'pH Level',
+                                data: phData,
+                                borderColor: '#667eea',
+                                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                tension: 0.4,
+                                fill: true
+                            },
+                            {
+                                label: 'Temperature',
+                                data: tempData,
+                                borderColor: '#38ef7d',
+                                backgroundColor: 'rgba(56, 239, 125, 0.1)',
+                                tension: 0.4,
+                                fill: true
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: true }
+                        },
+                        scales: {
+                            y: { beginAtZero: false }
+                        }
+                    }
+                });
+            }
+        } else {
+            if (metricCards) {
+                metricCards.innerHTML = '<div class="col-12"><div class="alert alert-info">No data available. Add readings to see metrics.</div></div>';
+            }
+            if (latestDetails) {
+                latestDetails.innerHTML = '<p class="text-muted text-center py-3">No readings available. Add data to begin monitoring.</p>';
+            }
+            if (nutrientBars) {
+                nutrientBars.innerHTML = '<p class="text-muted">No nutrient data available</p>';
+            }
         }
     }
 };
 
-// Initialize UI when DOM is ready
 document.addEventListener('DOMContentLoaded', () => ui.init());

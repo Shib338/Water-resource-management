@@ -1,6 +1,5 @@
 /**
- * Water Quality Management System
- * Real production system for water monitoring
+ * Water Quality Management System - Firebase Cloud Storage
  */
 
 const app = {
@@ -8,10 +7,16 @@ const app = {
     isLoading: false,
 
     init() {
-        this.loadData();
+        this.readings = [];
         this.setupEventListeners();
         this.validateBrowser();
         ui.showPage('dashboard');
+        ui.updateDashboard([]);
+        this.updateReports();
+        if (typeof charts !== 'undefined' && charts.updateCharts) {
+            charts.updateCharts([]);
+        }
+        document.getElementById('totalReadings').textContent = '0';
     },
 
     validateBrowser() {
@@ -53,10 +58,10 @@ const app = {
     },
 
     validateField(param, value) {
-        const field = document.getElementById(param);
-        if (!field) return false;
-
         try {
+            const field = document.getElementById(param);
+            if (!field) return false;
+
             const numValue = parseFloat(value);
             field.classList.remove('is-valid', 'is-invalid');
             
@@ -77,7 +82,6 @@ const app = {
             return true;
         } catch (error) {
             console.error('Validation error:', error);
-            field.classList.add('is-invalid');
             return false;
         }
     },
@@ -135,24 +139,47 @@ const app = {
         }
     },
 
-    loadData() {
+    async loadData() {
         try {
-            const stored = localStorage.getItem(CONFIG.STORAGE_KEY);
-            this.readings = stored ? JSON.parse(stored) : [];
+            this.readings = await FirebaseDB.loadReadings();
             
             this.readings = this.readings.filter(reading => {
-                return reading && typeof reading === 'object' && reading.id && reading.timestamp;
+                return reading && typeof reading === 'object' && reading.timestamp;
             });
             
-            document.getElementById('totalReadings').textContent = this.readings.length;
-            ui.updateDashboard(this.readings);
+            const totalEl = document.getElementById('totalReadings');
+            if (totalEl) totalEl.textContent = this.readings.length;
             
+            ui.updateDashboard(this.readings);
+            this.updateReports();
+            if (typeof charts !== 'undefined' && charts.updateCharts) {
+                charts.updateCharts(this.readings);
+            }
+            
+            console.log('✅ Loaded', this.readings.length, 'readings from cloud');
         } catch (error) {
+            console.error('Load error:', error);
             this.readings = [];
+            ui.updateDashboard([]);
         }
     },
 
-    addReading(location, values) {
+    resetDisplay() {
+        this.readings = [];
+        document.getElementById('totalReadings').textContent = '0';
+        ui.updateDashboard([]);
+        this.updateReports();
+        if (typeof charts !== 'undefined' && charts.updateCharts) {
+            charts.updateCharts([]);
+        }
+        ui.showPage('dashboard');
+        ui.showNotification('Successful', 'success');
+        console.log('🔄 Display cleared - Firebase data intact');
+    },
+
+
+
+    async addReading(location, values) {
         try {
             const reading = {
                 id: Date.now(),
@@ -161,35 +188,31 @@ const app = {
                 time: new Date().toLocaleTimeString(),
                 location: location.trim(),
                 ...values,
+                oxygen: values.dissolvedOxygen,
                 source: 'manual'
             };
 
-            this.readings.push(reading);
+            const saved = await FirebaseDB.saveReading(reading);
             
-            try {
-                localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(this.readings));
-            } catch (storageError) {
-                if (storageError.name === 'QuotaExceededError') {
-                    ui.showNotification('Storage quota exceeded. Please export and clear old data.', 'warning');
-                } else {
-                    ui.showNotification('Error saving data. Please try again.', 'error');
-                    return;
+            if (saved) {
+                this.readings = [reading];
+                ui.updateDashboard(this.readings);
+                this.updateReports();
+                if (typeof charts !== 'undefined' && charts.updateCharts) {
+                    charts.updateCharts(this.readings);
                 }
+                
+                const form = document.getElementById('readingForm');
+                if (form) form.reset();
+                
+                document.querySelectorAll('.is-valid, .is-invalid').forEach(el => {
+                    el.classList.remove('is-valid', 'is-invalid');
+                });
+                
+                ui.showNotification('✅ Water quality reading saved to cloud database', 'success');
+            } else {
+                ui.showNotification('Error saving reading. Please try again.', 'error');
             }
-            
-            const form = document.getElementById('readingForm');
-            if (form) form.reset();
-            
-            const totalElement = document.getElementById('totalReadings');
-            if (totalElement) totalElement.textContent = this.readings.length;
-            
-            ui.updateDashboard(this.readings);
-            
-            document.querySelectorAll('.is-valid, .is-invalid').forEach(el => {
-                el.classList.remove('is-valid', 'is-invalid');
-            });
-            
-            ui.showNotification('Water quality reading saved successfully', 'success');
         } catch (error) {
             console.error('Error adding reading:', error);
             ui.showNotification('Error saving reading. Please try again.', 'error');
@@ -234,21 +257,30 @@ const app = {
         ui.showNotification(`Exported ${validReadings.length} readings successfully`, 'success');
     },
 
-    clearAllData() {
-        if (this.readings.length === 0) {
-            ui.showNotification('No data to clear', 'info');
+    async clearAllData() {
+        const totalInCloud = (await FirebaseDB.loadReadings()).length;
+        
+        if (totalInCloud === 0) {
+            ui.showNotification('No data in cloud database to delete', 'info');
             return;
         }
         
-        const confirmed = confirm(`Are you sure you want to delete all ${this.readings.length} readings? This cannot be undone.`);
+        const confirmed = confirm(`⚠️ WARNING: Delete all ${totalInCloud} readings from Firebase cloud database?\n\nThis will PERMANENTLY delete all data and cannot be undone!`);
         
         if (confirmed) {
-            this.readings = [];
-            localStorage.removeItem(CONFIG.STORAGE_KEY);
-            document.getElementById('totalReadings').textContent = '0';
-            ui.updateDashboard([]);
-            
-            ui.showNotification('All data cleared', 'info');
+            const cleared = await FirebaseDB.clearAllData();
+            if (cleared) {
+                this.readings = [];
+                document.getElementById('totalReadings').textContent = '0';
+                ui.updateDashboard([]);
+                this.updateReports();
+                if (typeof charts !== 'undefined' && charts.updateCharts) {
+                    charts.updateCharts([]);
+                }
+                ui.showNotification('🗑️ All data permanently deleted from Firebase', 'info');
+            } else {
+                ui.showNotification('Error deleting data from Firebase', 'error');
+            }
         }
     },
 
@@ -260,6 +292,49 @@ const app = {
             lastReading: this.readings[this.readings.length - 1],
             dataSize: JSON.stringify(this.readings).length
         };
+    },
+
+    showPage(pageId) {
+        ui.showPage(pageId);
+    },
+
+    updateReports() {
+        const outputList = document.getElementById('outputList');
+        if (outputList) {
+            if (this.readings.length === 0) {
+                outputList.innerHTML = '<div class="alert alert-info"><i class="bi bi-info-circle"></i> No readings available. Add data to see reports.</div>';
+            } else {
+                let html = `<div class="alert alert-success mb-4"><strong>Total Readings:</strong> ${this.readings.length}</div>`;
+                html += '<div class="row g-3">';
+                this.readings.slice().reverse().forEach(reading => {
+                    html += `
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">${reading.location}</h6>
+                                    <p class="text-muted small">${new Date(reading.timestamp).toLocaleString()}</p>
+                                    <div class="row">
+                                        <div class="col-6"><small>pH: ${reading.ph?.toFixed(2)}</small></div>
+                                        <div class="col-6"><small>Temp: ${reading.temperature?.toFixed(1)}°C</small></div>
+                                        <div class="col-6"><small>O₂: ${reading.dissolvedOxygen?.toFixed(2)} mg/L</small></div>
+                                        <div class="col-6"><small>Turbidity: ${reading.turbidity?.toFixed(2)} NTU</small></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                outputList.innerHTML = html;
+            }
+        }
+    },
+
+    updateAnalytics() {
+        if (typeof charts !== 'undefined' && charts.updateCharts) {
+            charts.updateCharts(this.readings);
+        }
+        console.log('✅ Analytics updated with', this.readings.length, 'readings');
     }
 };
 
