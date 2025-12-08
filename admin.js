@@ -46,8 +46,11 @@ const admin = {
     },
 
     toggleAdmin() {
+        console.log('toggleAdmin called - isLoggedIn:', this.isLoggedIn, 'isAdminMode:', this.isAdminMode);
+        
         if (!this.isLoggedIn && !this.isAdminMode) {
             // Show login modal
+            console.log('Attempting to show login modal');
             const modalEl = document.getElementById('loginModal');
             if (!modalEl) {
                 console.error('Login modal not found!');
@@ -64,6 +67,8 @@ const admin = {
             console.log('Login modal shown');
             return;
         }
+        
+        console.log('Logging out admin');
         
         // Logout
         this.isAdminMode = false;
