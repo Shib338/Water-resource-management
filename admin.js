@@ -319,7 +319,9 @@ const admin = {
 
 // Initialize admin panel when DOM is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => admin.init());
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => admin.init(), 100);
+    });
 } else {
-    admin.init();
+    setTimeout(() => admin.init(), 100);
 }
