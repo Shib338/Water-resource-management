@@ -1,2 +1,3 @@
-Version 1.0.0 - Final Release
-Last Updated: December 8, 2025
+Version 1.1.0 - Final Release with Admin Login Modal
+Last Updated: December 8, 2025 - 11:30 PM
+Features: Firebase Cloud Database, Admin Login Modal, Refresh Functionality
