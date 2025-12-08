@@ -1,8 +1,11 @@
 // Admin Panel for Database Management
 const admin = {
     isAdminMode: false,
+    isLoggedIn: false,
     allData: [],
     filteredData: [],
+    ADMIN_USERNAME: 'admin',
+    ADMIN_PASSWORD: 'WaterAdmin@2024',
 
     async init() {
         const adminBtn = document.getElementById('adminBtn');
@@ -13,6 +16,23 @@ const admin = {
     },
 
     async toggleAdmin() {
+        if (!this.isLoggedIn && !this.isAdminMode) {
+            // Show login prompt
+            const username = prompt('Enter Admin Username:');
+            if (!username) return;
+            
+            const password = prompt('Enter Admin Password:');
+            if (!password) return;
+            
+            if (username === this.ADMIN_USERNAME && password === this.ADMIN_PASSWORD) {
+                this.isLoggedIn = true;
+                ui.showNotification('✅ Admin login successful!', 'success');
+            } else {
+                ui.showNotification('❌ Invalid username or password!', 'error');
+                return;
+            }
+        }
+        
         this.isAdminMode = !this.isAdminMode;
         const adminElements = document.querySelectorAll('.admin-only');
         const publicElements = document.querySelectorAll('.public-only');
@@ -21,13 +41,14 @@ const admin = {
         if (this.isAdminMode) {
             adminElements.forEach(el => el.style.display = '');
             publicElements.forEach(el => el.style.display = 'none');
-            adminText.textContent = 'Exit Admin';
+            adminText.textContent = 'Logout';
             await this.refreshData();
             await app.loadData();
         } else {
             adminElements.forEach(el => el.style.display = 'none');
             publicElements.forEach(el => el.style.display = '');
             adminText.textContent = 'Admin';
+            this.isLoggedIn = false;
         }
     },
 
