@@ -48,8 +48,20 @@ const admin = {
     toggleAdmin() {
         if (!this.isLoggedIn && !this.isAdminMode) {
             // Show login modal
-            const modal = new bootstrap.Modal(document.getElementById('loginModal'));
+            const modalEl = document.getElementById('loginModal');
+            if (!modalEl) {
+                console.error('Login modal not found!');
+                alert('Login modal not found. Please refresh the page.');
+                return;
+            }
+            if (typeof bootstrap === 'undefined') {
+                console.error('Bootstrap not loaded!');
+                alert('Bootstrap not loaded. Please refresh the page.');
+                return;
+            }
+            const modal = new bootstrap.Modal(modalEl);
             modal.show();
+            console.log('Login modal shown');
             return;
         }
         
