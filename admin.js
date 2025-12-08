@@ -12,43 +12,68 @@ const admin = {
         if (adminBtn) {
             adminBtn.addEventListener('click', () => this.toggleAdmin());
         }
+        
+        // Setup login form
+        const loginForm = document.getElementById('loginForm');
+        if (loginForm) {
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const username = document.getElementById('adminUser').value;
+                const password = document.getElementById('adminPass').value;
+                
+                const success = await this.handleLogin(username, password);
+                if (success) {
+                    bootstrap.Modal.getInstance(document.getElementById('loginModal')).hide();
+                    loginForm.reset();
+                }
+            });
+        }
+        
         console.log('Admin panel ready');
     },
 
-    async toggleAdmin() {
+    toggleAdmin() {
         if (!this.isLoggedIn && !this.isAdminMode) {
-            // Show login prompt
-            const username = prompt('Enter Admin Username:');
-            if (!username) return;
-            
-            const password = prompt('Enter Admin Password:');
-            if (!password) return;
-            
-            if (username === this.ADMIN_USERNAME && password === this.ADMIN_PASSWORD) {
-                this.isLoggedIn = true;
-                ui.showNotification('✅ Admin login successful!', 'success');
-            } else {
-                ui.showNotification('❌ Invalid username or password!', 'error');
-                return;
-            }
+            // Show login modal
+            const modal = new bootstrap.Modal(document.getElementById('loginModal'));
+            modal.show();
+            return;
         }
         
-        this.isAdminMode = !this.isAdminMode;
+        // Logout
+        this.isAdminMode = false;
+        this.isLoggedIn = false;
         const adminElements = document.querySelectorAll('.admin-only');
         const publicElements = document.querySelectorAll('.public-only');
         const adminText = document.getElementById('adminText');
         
-        if (this.isAdminMode) {
+        adminElements.forEach(el => el.style.display = 'none');
+        publicElements.forEach(el => el.style.display = '');
+        adminText.textContent = 'Admin';
+        ui.showNotification('Logged out successfully', 'info');
+    },
+
+    async handleLogin(username, password) {
+        if (username === this.ADMIN_USERNAME && password === this.ADMIN_PASSWORD) {
+            this.isLoggedIn = true;
+            this.isAdminMode = true;
+            
+            const adminElements = document.querySelectorAll('.admin-only');
+            const publicElements = document.querySelectorAll('.public-only');
+            const adminText = document.getElementById('adminText');
+            
             adminElements.forEach(el => el.style.display = '');
             publicElements.forEach(el => el.style.display = 'none');
             adminText.textContent = 'Logout';
+            
             await this.refreshData();
             await app.loadData();
+            
+            ui.showNotification('✅ Admin login successful!', 'success');
+            return true;
         } else {
-            adminElements.forEach(el => el.style.display = 'none');
-            publicElements.forEach(el => el.style.display = '');
-            adminText.textContent = 'Admin';
-            this.isLoggedIn = false;
+            ui.showNotification('❌ Invalid username or password!', 'error');
+            return false;
         }
     },
 
