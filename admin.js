@@ -17,7 +17,7 @@ const admin = {
         const publicElements = document.querySelectorAll('.public-only');
         const adminText = document.getElementById('adminText');
         
-        adminElements.forEach(el => el.style.display = 'none');
+        adminElements.forEach(el => el.style.setProperty('display', 'none', 'important'));
         publicElements.forEach(el => el.style.display = '');
         if (adminText) adminText.textContent = 'Admin';
         
@@ -60,7 +60,7 @@ const admin = {
         const publicElements = document.querySelectorAll('.public-only');
         const adminText = document.getElementById('adminText');
         
-        adminElements.forEach(el => el.style.display = 'none');
+        adminElements.forEach(el => el.style.setProperty('display', 'none', 'important'));
         publicElements.forEach(el => el.style.display = '');
         adminText.textContent = 'Admin';
         ui.showNotification('Logged out successfully', 'info');
@@ -75,7 +75,7 @@ const admin = {
             const publicElements = document.querySelectorAll('.public-only');
             const adminText = document.getElementById('adminText');
             
-            adminElements.forEach(el => el.style.display = '');
+            adminElements.forEach(el => el.style.setProperty('display', 'block', 'important'));
             publicElements.forEach(el => el.style.display = 'none');
             adminText.textContent = 'Logout';
             
