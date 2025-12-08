@@ -227,9 +227,8 @@ const app = {
 
     exportData() {
         // Check if admin is logged in
-        if (!Auth.isLoggedIn) {
+        if (!admin.isLoggedIn) {
             ui.showNotification('Admin login required to export data!', 'error');
-            Auth.showLoginModal();
             return;
         }
 
@@ -266,9 +265,8 @@ const app = {
 
     async clearAllData() {
         // Check if admin is logged in
-        if (!Auth.isLoggedIn) {
+        if (!admin.isLoggedIn) {
             ui.showNotification('Admin login required to delete data!', 'error');
-            Auth.showLoginModal();
             return;
         }
 

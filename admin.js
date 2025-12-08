@@ -8,6 +8,19 @@ const admin = {
     ADMIN_PASSWORD: 'WaterAdmin@2024',
 
     async init() {
+        // Ensure admin is logged out on page load
+        this.isLoggedIn = false;
+        this.isAdminMode = false;
+        
+        // Hide all admin-only elements on page load
+        const adminElements = document.querySelectorAll('.admin-only');
+        const publicElements = document.querySelectorAll('.public-only');
+        const adminText = document.getElementById('adminText');
+        
+        adminElements.forEach(el => el.style.display = 'none');
+        publicElements.forEach(el => el.style.display = '');
+        if (adminText) adminText.textContent = 'Admin';
+        
         const adminBtn = document.getElementById('adminBtn');
         if (adminBtn) {
             adminBtn.addEventListener('click', () => this.toggleAdmin());
@@ -29,7 +42,7 @@ const admin = {
             });
         }
         
-        console.log('Admin panel ready');
+        console.log('Admin panel ready - logged out by default');
     },
 
     toggleAdmin() {
