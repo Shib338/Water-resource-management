@@ -5,13 +5,30 @@ const admin = {
     filteredData: [],
 
     async init() {
-        // Admin button is now handled by auth.js
+        const adminBtn = document.getElementById('adminBtn');
+        if (adminBtn) {
+            adminBtn.addEventListener('click', () => this.toggleAdmin());
+        }
         console.log('Admin panel ready');
     },
 
     async toggleAdmin() {
-        // Don't do anything - Auth.js handles this now
-        // This function is kept for compatibility but does nothing
+        this.isAdminMode = !this.isAdminMode;
+        const adminElements = document.querySelectorAll('.admin-only');
+        const publicElements = document.querySelectorAll('.public-only');
+        const adminText = document.getElementById('adminText');
+        
+        if (this.isAdminMode) {
+            adminElements.forEach(el => el.style.display = '');
+            publicElements.forEach(el => el.style.display = 'none');
+            adminText.textContent = 'Exit Admin';
+            await this.refreshData();
+            await app.loadData();
+        } else {
+            adminElements.forEach(el => el.style.display = 'none');
+            publicElements.forEach(el => el.style.display = '');
+            adminText.textContent = 'Admin';
+        }
     },
 
     async refreshData() {
@@ -188,13 +205,6 @@ const admin = {
     },
 
     async deleteReading(id) {
-        // Check authentication
-        if (!Auth.isLoggedIn) {
-            ui.showNotification('Admin login required!', 'error');
-            Auth.showLoginModal();
-            return;
-        }
-
         if (!confirm('Are you sure you want to delete this reading?')) return;
 
         try {
@@ -208,13 +218,6 @@ const admin = {
     },
 
     async clearAllData() {
-        // Check authentication
-        if (!Auth.isLoggedIn) {
-            ui.showNotification('Admin login required!', 'error');
-            Auth.showLoginModal();
-            return;
-        }
-
         if (!confirm('⚠️ WARNING: This will delete ALL water quality readings!\n\nAre you absolutely sure?')) return;
         if (!confirm('This action CANNOT be undone. Type YES in the next prompt to confirm.')) return;
         
@@ -235,13 +238,6 @@ const admin = {
     },
 
     exportData() {
-        // Check authentication
-        if (!Auth.isLoggedIn) {
-            ui.showNotification('Admin login required!', 'error');
-            Auth.showLoginModal();
-            return;
-        }
-
         if (this.allData.length === 0) {
             ui.showNotification('No data to export', 'warning');
             return;
