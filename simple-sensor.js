@@ -50,45 +50,67 @@ const sensor = {
 
             if (this.isReading) {
                 this.stopReading();
-                readBtn.innerHTML = '<i class="bi bi-download"></i> Read Data';
+                readBtn.innerHTML = '<i class="bi bi-download"></i> Start Reading';
                 readBtn.classList.remove('btn-danger');
                 readBtn.classList.add('btn-success');
-                statusDiv.innerHTML = '<i class="bi bi-pause-circle text-warning"></i> Reading stopped';
             } else {
-                this.startReading(statusDiv, readBtn);
-                readBtn.innerHTML = '<i class="bi bi-stop-circle"></i> Stop Reading';
+                this.startContinuousReading(statusDiv, readBtn);
+                readBtn.innerHTML = '<i class="bi bi-stop-circle"></i> Stop';
                 readBtn.classList.remove('btn-success');
                 readBtn.classList.add('btn-danger');
             }
         };
     },
 
-    async startReading(statusDiv, readBtn) {
+
+
+    async startContinuousReading(statusDiv, readBtn) {
         this.isReading = true;
+        const displayDiv = document.getElementById('readingsDisplay');
+        const listDiv = document.getElementById('readingsList');
+        displayDiv.style.display = 'block';
+        
+        while (this.isReading) {
+            // Collect for 5 seconds
+            const readings = await this.collectReadings(statusDiv, listDiv);
+            
+            if (readings.length > 0 && this.isReading) {
+                const avgData = this.calculateAverage(readings);
+                this.fillForm(avgData);
+                listDiv.innerHTML += `<div class="alert alert-success mb-2"><strong>📊 AVG:</strong> pH=${avgData.ph.toFixed(2)}, Temp=${avgData.temperature.toFixed(1)}°C, DO=${avgData.dissolvedOxygen.toFixed(2)}</div>`;
+                listDiv.scrollTop = listDiv.scrollHeight;
+            }
+            
+            // Wait 5 seconds
+            if (this.isReading) {
+                statusDiv.innerHTML = '<i class="bi bi-clock text-warning"></i> Waiting 5 seconds...';
+                await new Promise(resolve => setTimeout(resolve, 5000));
+            }
+        }
+        
+        readBtn.innerHTML = '<i class="bi bi-download"></i> Start Reading';
+        readBtn.classList.remove('btn-danger');
+        readBtn.classList.add('btn-success');
+        statusDiv.innerHTML = '<i class="bi bi-pause-circle text-info"></i> Stopped';
+    },
+
+    async collectReadings(statusDiv, listDiv) {
         const readings = [];
         const startTime = Date.now();
         const duration = 5000;
         
-        const displayDiv = document.getElementById('readingsDisplay');
-        const listDiv = document.getElementById('readingsList');
-        displayDiv.style.display = 'block';
-        listDiv.innerHTML = '';
+        listDiv.innerHTML += '<hr><div class="text-primary"><strong>🔄 New cycle...</strong></div>';
         
-        statusDiv.innerHTML = '<i class="bi bi-hourglass-split text-primary"></i> Collecting data for 5 seconds...';
-        console.log('📡 Starting 5-second data collection...');
-
         try {
             this.reader = this.port.readable.getReader();
             let buffer = '';
 
             while (this.isReading && (Date.now() - startTime) < duration) {
                 const { value, done } = await this.reader.read();
-                
                 if (done) break;
 
                 const chunk = new TextDecoder().decode(value);
                 buffer += chunk;
-                console.log('📥 Raw:', chunk);
 
                 const lines = buffer.split(/[\r\n]+/);
                 buffer = lines.pop() || '';
@@ -96,16 +118,12 @@ const sensor = {
                 for (let line of lines) {
                     line = line.trim();
                     if (line.length > 0) {
-                        console.log('🔍 Line:', line);
                         const data = this.parseData(line);
                         if (data) {
                             readings.push(data);
-                            console.log('✅ Reading', readings.length, ':', data);
                             const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-                            statusDiv.innerHTML = `<i class="bi bi-hourglass-split text-primary"></i> Collected ${readings.length} readings (${elapsed}s / 5s)`;
-                            
-                            // Display reading
-                            listDiv.innerHTML += `<div class="mb-1"><strong>#${readings.length}:</strong> pH=${data.ph.toFixed(2)}, Temp=${data.temperature.toFixed(1)}°C, DO=${data.dissolvedOxygen.toFixed(2)}</div>`;
+                            statusDiv.innerHTML = `<i class="bi bi-hourglass-split text-primary"></i> Reading... ${readings.length} (${elapsed}s)`;
+                            listDiv.innerHTML += `<div class="small">#${readings.length}: pH=${data.ph.toFixed(2)}</div>`;
                             listDiv.scrollTop = listDiv.scrollHeight;
                         }
                     }
@@ -113,41 +131,14 @@ const sensor = {
             }
 
             this.reader.releaseLock();
-            this.isReading = false;
-            
-            if (readings.length > 0) {
-                const avgData = this.calculateAverage(readings);
-                console.log('📊 Average of', readings.length, 'readings:', avgData);
-                
-                // Show average
-                listDiv.innerHTML += `<hr><div class="alert alert-success mb-0"><strong>📊 AVERAGE:</strong> pH=${avgData.ph.toFixed(2)}, Temp=${avgData.temperature.toFixed(1)}°C, DO=${avgData.dissolvedOxygen.toFixed(2)}</div>`;
-                
-                this.fillForm(avgData);
-                statusDiv.innerHTML = `<i class="bi bi-check-circle text-success"></i> Average of ${readings.length} readings calculated!`;
-                ui.showNotification(`✅ Average of ${readings.length} readings!`, 'success');
-            } else {
-                statusDiv.innerHTML = '<i class="bi bi-x-circle text-danger"></i> No data received';
-                ui.showNotification('No data received from sensor', 'warning');
-            }
-            
-            readBtn.innerHTML = '<i class="bi bi-download"></i> Read Data';
-            readBtn.classList.remove('btn-danger');
-            readBtn.classList.add('btn-success');
-            
         } catch (error) {
-            console.error('❌ Read error:', error);
-            statusDiv.innerHTML = '<i class="bi bi-x-circle text-danger"></i> Error: ' + error.message;
-            ui.showNotification('Read error: ' + error.message, 'danger');
-            this.isReading = false;
-            
+            console.error('Read error:', error);
             if (this.reader) {
                 try { this.reader.releaseLock(); } catch (e) {}
             }
-            
-            readBtn.innerHTML = '<i class="bi bi-download"></i> Read Data';
-            readBtn.classList.remove('btn-danger');
-            readBtn.classList.add('btn-success');
         }
+        
+        return readings;
     },
 
     stopReading() {
