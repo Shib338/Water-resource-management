@@ -204,6 +204,12 @@ const sensor = {
             line = line.trim();
             if (line.length < 5 || line.length > 200) return null;
             
+            // Skip Arduino initialization messages
+            if (line.includes('===') || line.includes('Initializing') || 
+                line.includes('Ready') || line.includes('Monitor')) {
+                return null;
+            }
+            
             // Format: "Voltage: 2.506 V | pH Value: 6.96 (Neutral)"
             const phMatch = line.match(/pH Value:\s*([\d.]+)/);
             
