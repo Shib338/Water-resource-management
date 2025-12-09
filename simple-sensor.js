@@ -64,28 +64,28 @@ const sensor = {
 
     async startReading(statusDiv, readBtn) {
         this.isReading = true;
-        statusDiv.innerHTML = '<i class="bi bi-hourglass-split text-primary"></i> Reading live data...';
-        console.log('📡 Starting continuous read...');
+        const readings = [];
+        const startTime = Date.now();
+        const duration = 5000; // 5 seconds
+        
+        statusDiv.innerHTML = '<i class="bi bi-hourglass-split text-primary"></i> Collecting data for 5 seconds...';
+        console.log('📡 Starting 5-second data collection...');
 
         try {
             this.reader = this.port.readable.getReader();
             let buffer = '';
 
-            while (this.isReading) {
+            while (this.isReading && (Date.now() - startTime) < duration) {
                 const { value, done } = await this.reader.read();
                 
-                if (done) {
-                    console.log('Reader closed');
-                    break;
-                }
+                if (done) break;
 
                 const chunk = new TextDecoder().decode(value);
                 buffer += chunk;
                 console.log('📥 Raw:', chunk);
 
-                // Process complete lines
                 const lines = buffer.split(/[\r\n]+/);
-                buffer = lines.pop() || ''; // Keep incomplete line in buffer
+                buffer = lines.pop() || '';
 
                 for (let line of lines) {
                     line = line.trim();
@@ -93,16 +93,32 @@ const sensor = {
                         console.log('🔍 Line:', line);
                         const data = this.parseData(line);
                         if (data) {
-                            console.log('✅ Valid data:', data);
-                            this.fillForm(data);
-                            statusDiv.innerHTML = '<i class="bi bi-check-circle text-success"></i> Data received! Reading...';
+                            readings.push(data);
+                            console.log('✅ Reading', readings.length, ':', data);
+                            const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                            statusDiv.innerHTML = `<i class="bi bi-hourglass-split text-primary"></i> Collected ${readings.length} readings (${elapsed}s / 5s)`;
                         }
                     }
                 }
             }
 
             this.reader.releaseLock();
-            console.log('✅ Reading stopped');
+            this.isReading = false;
+            
+            if (readings.length > 0) {
+                const avgData = this.calculateAverage(readings);
+                console.log('📊 Average of', readings.length, 'readings:', avgData);
+                this.fillForm(avgData);
+                statusDiv.innerHTML = `<i class="bi bi-check-circle text-success"></i> Average of ${readings.length} readings calculated!`;
+                ui.showNotification(`✅ Average of ${readings.length} readings!`, 'success');
+            } else {
+                statusDiv.innerHTML = '<i class="bi bi-x-circle text-danger"></i> No data received';
+                ui.showNotification('No data received from sensor', 'warning');
+            }
+            
+            readBtn.innerHTML = '<i class="bi bi-download"></i> Read Data';
+            readBtn.classList.remove('btn-danger');
+            readBtn.classList.add('btn-success');
             
         } catch (error) {
             console.error('❌ Read error:', error);
@@ -123,6 +139,39 @@ const sensor = {
     stopReading() {
         this.isReading = false;
         console.log('⏹️ Stop requested');
+    },
+
+    calculateAverage(readings) {
+        const sum = {
+            ph: 0,
+            hydrogenSulfide: 0,
+            turbidity: 0,
+            nitrogen: 0,
+            copper: 0,
+            dissolvedOxygen: 0,
+            temperature: 0
+        };
+
+        readings.forEach(reading => {
+            sum.ph += reading.ph;
+            sum.hydrogenSulfide += reading.hydrogenSulfide;
+            sum.turbidity += reading.turbidity;
+            sum.nitrogen += reading.nitrogen;
+            sum.copper += reading.copper;
+            sum.dissolvedOxygen += reading.dissolvedOxygen;
+            sum.temperature += reading.temperature;
+        });
+
+        const count = readings.length;
+        return {
+            ph: sum.ph / count,
+            hydrogenSulfide: sum.hydrogenSulfide / count,
+            turbidity: sum.turbidity / count,
+            nitrogen: sum.nitrogen / count,
+            copper: sum.copper / count,
+            dissolvedOxygen: sum.dissolvedOxygen / count,
+            temperature: sum.temperature / count
+        };
     },
 
     parseData(line) {
