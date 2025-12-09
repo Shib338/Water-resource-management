@@ -16,6 +16,9 @@ const app = {
         if (typeof charts !== 'undefined' && charts.updateCharts) {
             charts.updateCharts([]);
         }
+        if (typeof sensor !== 'undefined' && sensor.init) {
+            sensor.init();
+        }
         document.getElementById('totalReadings').textContent = '0';
     },
 

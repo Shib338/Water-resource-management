@@ -7,9 +7,39 @@ const sensor = {
     reader: null,
     isConnected: false,
 
+    init() {
+        const connectBtn = document.getElementById('connectBtn');
+        const readBtn = document.getElementById('readBtn');
+        const statusDiv = document.getElementById('sensorStatus');
+
+        if (connectBtn) {
+            connectBtn.onclick = async () => {
+                const success = await this.connect();
+                if (success) {
+                    connectBtn.disabled = true;
+                    readBtn.disabled = false;
+                    statusDiv.innerHTML = '<i class="bi bi-check-circle text-success"></i> Sensor connected';
+                }
+            };
+        }
+
+        if (readBtn) {
+            readBtn.onclick = async () => {
+                statusDiv.innerHTML = '<i class="bi bi-hourglass-split text-primary"></i> Reading data...';
+                const data = await this.readData();
+                if (data) {
+                    this.fillForm(data);
+                    statusDiv.innerHTML = '<i class="bi bi-check-circle text-success"></i> Data loaded successfully';
+                } else {
+                    statusDiv.innerHTML = '<i class="bi bi-x-circle text-danger"></i> Failed to read data';
+                }
+            };
+        }
+    },
+
     async connect() {
         if (!('serial' in navigator)) {
-            ui.showNotification('Web Serial API not supported', 'error');
+            alert('Web Serial API not supported. Please use Chrome, Edge, or Opera browser.');
             return false;
         }
 
@@ -17,44 +47,73 @@ const sensor = {
             this.port = await navigator.serial.requestPort();
             await this.port.open({ baudRate: 9600 });
             this.isConnected = true;
-            ui.showNotification('Sensor connected successfully', 'success');
+            ui.showNotification('Sensor connected successfully!', 'success');
             return true;
         } catch (error) {
-            ui.showNotification('Failed to connect sensor', 'error');
+            console.error('Connection error:', error);
+            ui.showNotification('Failed to connect: ' + error.message, 'danger');
             return false;
         }
     },
 
     async readData() {
         if (!this.isConnected || !this.port) {
-            ui.showNotification('No sensor connected', 'warning');
+            ui.showNotification('Please connect sensor first', 'warning');
             return null;
         }
 
         try {
             const reader = this.port.readable.getReader();
-            const { value } = await reader.read();
+            let buffer = '';
+            
+            // Read for 2 seconds
+            const timeout = setTimeout(() => reader.cancel(), 2000);
+            
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                
+                buffer += new TextDecoder().decode(value);
+                
+                // Check if we have a complete line
+                if (buffer.includes('\n')) {
+                    clearTimeout(timeout);
+                    break;
+                }
+            }
+            
             reader.releaseLock();
-
-            const data = new TextDecoder().decode(value);
-            return this.parseData(data);
+            
+            if (buffer.trim()) {
+                return this.parseData(buffer);
+            }
+            
+            ui.showNotification('No data received from sensor', 'warning');
+            return null;
         } catch (error) {
-            ui.showNotification('Failed to read sensor data', 'error');
+            console.error('Read error:', error);
+            ui.showNotification('Failed to read: ' + error.message, 'danger');
             return null;
         }
     },
 
     parseData(rawData) {
         try {
+            console.log('Raw sensor data:', rawData);
+            
             // Try JSON format first
             if (rawData.trim().startsWith('{')) {
-                return JSON.parse(rawData);
+                const parsed = JSON.parse(rawData);
+                console.log('Parsed JSON:', parsed);
+                return parsed;
             }
             
-            // Try CSV format
-            const values = rawData.trim().split(',');
+            // Try CSV format: pH,H2S,Turbidity,Nitrogen,Copper,DO,Temp
+            const values = rawData.trim().split(',').map(v => v.trim());
+            console.log('CSV values:', values);
+            
             if (values.length >= 7) {
-                return {
+                const data = {
                     ph: parseFloat(values[0]),
                     hydrogenSulfide: parseFloat(values[1]),
                     turbidity: parseFloat(values[2]),
@@ -63,11 +122,30 @@ const sensor = {
                     dissolvedOxygen: parseFloat(values[5]),
                     temperature: parseFloat(values[6])
                 };
+                console.log('Parsed CSV:', data);
+                return data;
             }
+            
+            ui.showNotification('Invalid data format from sensor', 'warning');
         } catch (error) {
             console.error('Data parsing error:', error);
+            ui.showNotification('Error parsing sensor data', 'danger');
         }
         return null;
+    },
+    
+    fillForm(data) {
+        if (!data) return;
+        
+        document.getElementById('ph').value = data.ph || '';
+        document.getElementById('hydrogenSulfide').value = data.hydrogenSulfide || '';
+        document.getElementById('turbidity').value = data.turbidity || '';
+        document.getElementById('nitrogen').value = data.nitrogen || '';
+        document.getElementById('copper').value = data.copper || '';
+        document.getElementById('dissolvedOxygen').value = data.dissolvedOxygen || '';
+        document.getElementById('temperature').value = data.temperature || '';
+        
+        ui.showNotification('Sensor data loaded into form', 'success');
     },
 
     async disconnect() {
