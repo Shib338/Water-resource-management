@@ -66,7 +66,12 @@ const sensor = {
         this.isReading = true;
         const readings = [];
         const startTime = Date.now();
-        const duration = 5000; // 5 seconds
+        const duration = 5000;
+        
+        const displayDiv = document.getElementById('readingsDisplay');
+        const listDiv = document.getElementById('readingsList');
+        displayDiv.style.display = 'block';
+        listDiv.innerHTML = '';
         
         statusDiv.innerHTML = '<i class="bi bi-hourglass-split text-primary"></i> Collecting data for 5 seconds...';
         console.log('📡 Starting 5-second data collection...');
@@ -97,6 +102,10 @@ const sensor = {
                             console.log('✅ Reading', readings.length, ':', data);
                             const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
                             statusDiv.innerHTML = `<i class="bi bi-hourglass-split text-primary"></i> Collected ${readings.length} readings (${elapsed}s / 5s)`;
+                            
+                            // Display reading
+                            listDiv.innerHTML += `<div class="mb-1"><strong>#${readings.length}:</strong> pH=${data.ph.toFixed(2)}, Temp=${data.temperature.toFixed(1)}°C, DO=${data.dissolvedOxygen.toFixed(2)}</div>`;
+                            listDiv.scrollTop = listDiv.scrollHeight;
                         }
                     }
                 }
@@ -108,6 +117,10 @@ const sensor = {
             if (readings.length > 0) {
                 const avgData = this.calculateAverage(readings);
                 console.log('📊 Average of', readings.length, 'readings:', avgData);
+                
+                // Show average
+                listDiv.innerHTML += `<hr><div class="alert alert-success mb-0"><strong>📊 AVERAGE:</strong> pH=${avgData.ph.toFixed(2)}, Temp=${avgData.temperature.toFixed(1)}°C, DO=${avgData.dissolvedOxygen.toFixed(2)}</div>`;
+                
                 this.fillForm(avgData);
                 statusDiv.innerHTML = `<i class="bi bi-check-circle text-success"></i> Average of ${readings.length} readings calculated!`;
                 ui.showNotification(`✅ Average of ${readings.length} readings!`, 'success');
