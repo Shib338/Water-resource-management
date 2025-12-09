@@ -99,18 +99,28 @@ const sensor = {
         const startTime = Date.now();
         const duration = 5000;
         
-        listDiv.innerHTML += '<hr><div class="text-primary"><strong>🔄 New cycle...</strong></div>';
+        listDiv.innerHTML += '<hr><div class="text-primary"><strong>🔄 Cycle started...</strong></div>';
+        console.log('🔄 Starting new cycle');
         
         try {
             this.reader = this.port.readable.getReader();
             let buffer = '';
+            let dataReceived = false;
 
             while (this.isReading && (Date.now() - startTime) < duration) {
                 const { value, done } = await this.reader.read();
-                if (done) break;
+                if (done) {
+                    console.log('Reader done');
+                    break;
+                }
 
+                dataReceived = true;
                 const chunk = new TextDecoder().decode(value);
                 buffer += chunk;
+                
+                console.log('RAW DATA:', chunk);
+                listDiv.innerHTML += `<div class="small text-muted">Raw: "${chunk.replace(/\r/g, '\\r').replace(/\n/g, '\\n')}"</div>`;
+                listDiv.scrollTop = listDiv.scrollHeight;
 
                 const lines = buffer.split(/[\r\n]+/);
                 buffer = lines.pop() || '';
@@ -118,26 +128,37 @@ const sensor = {
                 for (let line of lines) {
                     line = line.trim();
                     if (line.length > 0) {
+                        console.log('LINE:', line);
                         const data = this.parseData(line);
                         if (data) {
                             readings.push(data);
-                            const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-                            statusDiv.innerHTML = `<i class="bi bi-hourglass-split text-primary"></i> Reading... ${readings.length} (${elapsed}s)`;
-                            listDiv.innerHTML += `<div class="small">#${readings.length}: pH=${data.ph.toFixed(2)}</div>`;
+                            console.log('PARSED:', data);
+                            statusDiv.innerHTML = `<i class="bi bi-hourglass-split text-primary"></i> Got ${readings.length} readings`;
+                            listDiv.innerHTML += `<div class="small"><strong>#${readings.length}:</strong> pH=${data.ph.toFixed(2)}, Temp=${data.temperature.toFixed(1)}</div>`;
                             listDiv.scrollTop = listDiv.scrollHeight;
+                        } else {
+                            console.log('PARSE FAILED for:', line);
+                            listDiv.innerHTML += `<div class="small text-danger">Parse failed: "${line}"</div>`;
                         }
                     }
                 }
             }
 
             this.reader.releaseLock();
+            
+            if (!dataReceived) {
+                console.log('❌ NO DATA RECEIVED FROM SENSOR!');
+                listDiv.innerHTML += '<div class="alert alert-danger">NO DATA RECEIVED! Check sensor connection and baud rate.</div>';
+            }
         } catch (error) {
-            console.error('Read error:', error);
+            console.error('❌ Read error:', error);
+            listDiv.innerHTML += `<div class="alert alert-danger">Error: ${error.message}</div>`;
             if (this.reader) {
                 try { this.reader.releaseLock(); } catch (e) {}
             }
         }
         
+        console.log(`Cycle complete. Collected ${readings.length} readings`);
         return readings;
     },
 
