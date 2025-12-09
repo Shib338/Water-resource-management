@@ -31,6 +31,7 @@ const sensor = {
                 connectBtn.classList.add('btn-success');
                 connectBtn.innerHTML = '<i class="bi bi-check-circle"></i> Connected';
                 readBtn.disabled = false;
+                document.getElementById('monitorBtn').disabled = false;
                 statusDiv.innerHTML = '<i class="bi bi-check-circle text-success"></i> Connected! Click Read Data';
                 ui.showNotification('Sensor connected!', 'success');
                 console.log('✅ Sensor connected');
@@ -242,5 +243,38 @@ const sensor = {
         this.fillForm(testData);
         ui.showNotification('✅ Test data filled!', 'success');
         console.log('🧪 Test data:', testData);
+    },
+
+    async monitorRaw() {
+        if (!this.isConnected) {
+            alert('Connect sensor first!');
+            return;
+        }
+
+        const displayDiv = document.getElementById('readingsDisplay');
+        const listDiv = document.getElementById('readingsList');
+        displayDiv.style.display = 'block';
+        listDiv.innerHTML = '<div class="alert alert-info">📡 Monitoring raw data for 10 seconds...</div>';
+
+        try {
+            const reader = this.port.readable.getReader();
+            const startTime = Date.now();
+
+            while ((Date.now() - startTime) < 10000) {
+                const { value, done } = await reader.read();
+                if (done) break;
+
+                const text = new TextDecoder().decode(value);
+                const hex = Array.from(value).map(b => b.toString(16).padStart(2, '0')).join(' ');
+                
+                listDiv.innerHTML += `<div class="mb-2"><strong>Text:</strong> "${text.replace(/\r/g, '\\r').replace(/\n/g, '\\n')}"<br><small class="text-muted">Hex: ${hex}</small></div>`;
+                listDiv.scrollTop = listDiv.scrollHeight;
+            }
+
+            reader.releaseLock();
+            listDiv.innerHTML += '<hr><div class="alert alert-success">✅ Monitoring complete!</div>';
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
     }
 };
