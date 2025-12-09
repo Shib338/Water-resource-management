@@ -165,5 +165,20 @@ const sensor = {
         document.getElementById('dissolvedOxygen').value = data.dissolvedOxygen.toFixed(2);
         document.getElementById('temperature').value = data.temperature.toFixed(1);
         console.log('✅ Form updated');
+    },
+
+    testFill() {
+        const testData = {
+            ph: 7.2,
+            hydrogenSulfide: 0.05,
+            turbidity: 2.3,
+            nitrogen: 5.1,
+            copper: 0.8,
+            dissolvedOxygen: 8.5,
+            temperature: 22.5
+        };
+        this.fillForm(testData);
+        ui.showNotification('✅ Test data filled!', 'success');
+        console.log('🧪 Test data:', testData);
     }
 };
