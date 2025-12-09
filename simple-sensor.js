@@ -71,7 +71,8 @@ const sensor = {
         displayDiv.style.display = 'block';
         
         while (this.isReading) {
-            // Collect for 5 seconds
+            listDiv.innerHTML = '';
+            
             const readings = await this.collectReadings(statusDiv, listDiv);
             
             if (readings.length > 0 && this.isReading) {
@@ -81,13 +82,11 @@ const sensor = {
                 listDiv.innerHTML += `<div class="alert alert-success mb-2"><strong>📊 AVERAGE:</strong> pH ${avgData.ph.toFixed(2)} (${status}) from ${readings.length} readings</div>`;
                 listDiv.scrollTop = listDiv.scrollHeight;
                 ui.showNotification(`✅ pH ${avgData.ph.toFixed(2)} (${status})`, 'success');
-            }
-            
-            // Wait 5 seconds then clear
-            if (this.isReading) {
-                statusDiv.innerHTML = '<i class="bi bi-clock text-warning"></i> Waiting 5 seconds...';
-                await new Promise(resolve => setTimeout(resolve, 5000));
-                listDiv.innerHTML = '';
+                
+                if (this.isReading) {
+                    statusDiv.innerHTML = '<i class="bi bi-clock text-warning"></i> Waiting 5 seconds...';
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                }
             }
         }
         
@@ -102,7 +101,7 @@ const sensor = {
         const startTime = Date.now();
         const duration = 5000;
         
-        listDiv.innerHTML = '<div class="text-primary"><strong>🔄 Cycle started...</strong></div>';
+        listDiv.innerHTML += '<div class="text-primary mb-2"><strong>🔄 Collecting readings...</strong></div>';
         console.log('🔄 Starting new cycle');
         
         try {
