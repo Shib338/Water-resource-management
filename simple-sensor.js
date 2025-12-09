@@ -1,7 +1,3 @@
-/**
- * Simple Sensor Integration
- */
-
 const sensor = {
     port: null,
     reader: null,
@@ -17,19 +13,25 @@ const sensor = {
                 const success = await this.connect();
                 if (success) {
                     connectBtn.disabled = true;
+                    connectBtn.classList.remove('btn-outline-primary');
+                    connectBtn.classList.add('btn-success');
+                    connectBtn.innerHTML = '<i class="bi bi-check-circle"></i> Connected';
                     readBtn.disabled = false;
-                    statusDiv.innerHTML = '<i class="bi bi-check-circle text-success"></i> Sensor connected';
+                    statusDiv.innerHTML = '<i class="bi bi-check-circle text-success"></i> Sensor connected - Ready to read';
                 }
             };
         }
 
         if (readBtn) {
             readBtn.onclick = async () => {
-                statusDiv.innerHTML = '<i class="bi bi-hourglass-split text-primary"></i> Reading data...';
+                readBtn.disabled = true;
+                statusDiv.innerHTML = '<i class="bi bi-hourglass-split text-primary"></i> Reading data from sensor...';
                 const data = await this.readData();
+                readBtn.disabled = false;
+                
                 if (data) {
                     this.fillForm(data);
-                    statusDiv.innerHTML = '<i class="bi bi-check-circle text-success"></i> Data loaded successfully';
+                    statusDiv.innerHTML = '<i class="bi bi-check-circle text-success"></i> Data loaded successfully!';
                 } else {
                     statusDiv.innerHTML = '<i class="bi bi-x-circle text-danger"></i> Failed to read data';
                 }
@@ -39,7 +41,7 @@ const sensor = {
 
     async connect() {
         if (!('serial' in navigator)) {
-            alert('Web Serial API not supported. Please use Chrome, Edge, or Opera browser.');
+            alert('USB Serial not supported. Use Chrome, Edge, or Opera browser.');
             return false;
         }
 
@@ -47,89 +49,93 @@ const sensor = {
             this.port = await navigator.serial.requestPort();
             await this.port.open({ baudRate: 9600 });
             this.isConnected = true;
-            ui.showNotification('Sensor connected successfully!', 'success');
+            ui.showNotification('USB Sensor connected!', 'success');
             return true;
         } catch (error) {
             console.error('Connection error:', error);
-            ui.showNotification('Failed to connect: ' + error.message, 'danger');
+            ui.showNotification('Connection failed: ' + error.message, 'danger');
             return false;
         }
     },
 
     async readData() {
         if (!this.isConnected || !this.port) {
-            ui.showNotification('Please connect sensor first', 'warning');
+            ui.showNotification('Connect sensor first', 'warning');
             return null;
         }
 
         try {
-            const reader = this.port.readable.getReader();
+            const textDecoder = new TextDecoderStream();
+            const readableStreamClosed = this.port.readable.pipeTo(textDecoder.writable);
+            const reader = textDecoder.readable.getReader();
+
             let buffer = '';
+            const startTime = Date.now();
             
-            // Read for 2 seconds
-            const timeout = setTimeout(() => reader.cancel(), 2000);
-            
-            while (true) {
+            while (Date.now() - startTime < 3000) {
                 const { value, done } = await reader.read();
                 if (done) break;
                 
-                buffer += new TextDecoder().decode(value);
+                buffer += value;
+                console.log('Received:', value);
                 
-                // Check if we have a complete line
-                if (buffer.includes('\n')) {
-                    clearTimeout(timeout);
-                    break;
+                if (buffer.includes('\n') || buffer.includes('\r')) {
+                    const lines = buffer.split(/[\r\n]+/);
+                    for (let line of lines) {
+                        line = line.trim();
+                        if (line.length > 0) {
+                            console.log('Processing line:', line);
+                            const data = this.parseData(line);
+                            if (data) {
+                                reader.cancel();
+                                return data;
+                            }
+                        }
+                    }
+                    buffer = '';
                 }
             }
-            
-            reader.releaseLock();
-            
-            if (buffer.trim()) {
-                return this.parseData(buffer);
-            }
-            
-            ui.showNotification('No data received from sensor', 'warning');
+
+            reader.cancel();
+            ui.showNotification('No valid data received', 'warning');
             return null;
         } catch (error) {
             console.error('Read error:', error);
-            ui.showNotification('Failed to read: ' + error.message, 'danger');
+            ui.showNotification('Read failed: ' + error.message, 'danger');
             return null;
         }
     },
 
     parseData(rawData) {
         try {
-            console.log('Raw sensor data:', rawData);
+            console.log('Parsing:', rawData);
             
-            // Try JSON format first
+            // JSON format
             if (rawData.trim().startsWith('{')) {
                 const parsed = JSON.parse(rawData);
                 console.log('Parsed JSON:', parsed);
                 return parsed;
             }
             
-            // Try CSV format: pH,H2S,Turbidity,Nitrogen,Copper,DO,Temp
-            const values = rawData.trim().split(',').map(v => v.trim());
+            // CSV format: pH,H2S,Turbidity,Nitrogen,Copper,DO,Temp
+            const values = rawData.trim().split(',').map(v => parseFloat(v.trim()));
             console.log('CSV values:', values);
             
-            if (values.length >= 7) {
+            if (values.length >= 7 && values.every(v => !isNaN(v))) {
                 const data = {
-                    ph: parseFloat(values[0]),
-                    hydrogenSulfide: parseFloat(values[1]),
-                    turbidity: parseFloat(values[2]),
-                    nitrogen: parseFloat(values[3]),
-                    copper: parseFloat(values[4]),
-                    dissolvedOxygen: parseFloat(values[5]),
-                    temperature: parseFloat(values[6])
+                    ph: values[0],
+                    hydrogenSulfide: values[1],
+                    turbidity: values[2],
+                    nitrogen: values[3],
+                    copper: values[4],
+                    dissolvedOxygen: values[5],
+                    temperature: values[6]
                 };
                 console.log('Parsed CSV:', data);
                 return data;
             }
-            
-            ui.showNotification('Invalid data format from sensor', 'warning');
         } catch (error) {
-            console.error('Data parsing error:', error);
-            ui.showNotification('Error parsing sensor data', 'danger');
+            console.error('Parse error:', error);
         }
         return null;
     },
@@ -145,15 +151,19 @@ const sensor = {
         document.getElementById('dissolvedOxygen').value = data.dissolvedOxygen || '';
         document.getElementById('temperature').value = data.temperature || '';
         
-        ui.showNotification('Sensor data loaded into form', 'success');
+        ui.showNotification('Sensor data loaded into form!', 'success');
     },
 
     async disconnect() {
         if (this.port) {
-            await this.port.close();
-            this.port = null;
-            this.isConnected = false;
-            ui.showNotification('Sensor disconnected', 'info');
+            try {
+                await this.port.close();
+                this.port = null;
+                this.isConnected = false;
+                ui.showNotification('Sensor disconnected', 'info');
+            } catch (error) {
+                console.error('Disconnect error:', error);
+            }
         }
     }
 };
