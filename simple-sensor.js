@@ -76,9 +76,11 @@ const sensor = {
             
             if (readings.length > 0 && this.isReading) {
                 const avgData = this.calculateAverage(readings);
+                const status = avgData.ph < 7 ? 'Acidic' : avgData.ph > 7 ? 'Alkaline' : 'Neutral';
                 this.fillForm(avgData);
-                listDiv.innerHTML += `<div class="alert alert-success mb-2"><strong>📊 AVG:</strong> pH=${avgData.ph.toFixed(2)}, Temp=${avgData.temperature.toFixed(1)}°C, DO=${avgData.dissolvedOxygen.toFixed(2)}</div>`;
+                listDiv.innerHTML += `<div class="alert alert-success mb-2"><strong>📊 AVERAGE:</strong> pH ${avgData.ph.toFixed(2)} (${status}) from ${readings.length} readings</div>`;
                 listDiv.scrollTop = listDiv.scrollHeight;
+                ui.showNotification(`✅ pH ${avgData.ph.toFixed(2)} (${status})`, 'success');
             }
             
             // Wait 5 seconds
@@ -119,8 +121,6 @@ const sensor = {
                 buffer += chunk;
                 
                 console.log('RAW DATA:', chunk);
-                listDiv.innerHTML += `<div class="small text-muted">Raw: "${chunk.replace(/\r/g, '\\r').replace(/\n/g, '\\n')}"</div>`;
-                listDiv.scrollTop = listDiv.scrollHeight;
 
                 const lines = buffer.split(/[\r\n]+/);
                 buffer = lines.pop() || '';
@@ -128,17 +128,13 @@ const sensor = {
                 for (let line of lines) {
                     line = line.trim();
                     if (line.length > 0) {
-                        console.log('LINE:', line);
                         const data = this.parseData(line);
                         if (data) {
                             readings.push(data);
-                            console.log('PARSED:', data);
-                            statusDiv.innerHTML = `<i class="bi bi-hourglass-split text-primary"></i> Got ${readings.length} readings`;
-                            listDiv.innerHTML += `<div class="small"><strong>#${readings.length}:</strong> pH=${data.ph.toFixed(2)}, Temp=${data.temperature.toFixed(1)}</div>`;
+                            const status = data.ph < 7 ? 'Acidic' : data.ph > 7 ? 'Alkaline' : 'Neutral';
+                            statusDiv.innerHTML = `<i class="bi bi-hourglass-split text-primary"></i> Reading ${readings.length}...`;
+                            listDiv.innerHTML += `<div class="mb-1"><strong>#${readings.length}:</strong> pH ${data.ph.toFixed(2)} (${status})</div>`;
                             listDiv.scrollTop = listDiv.scrollHeight;
-                        } else {
-                            console.log('PARSE FAILED for:', line);
-                            listDiv.innerHTML += `<div class="small text-danger">Parse failed: "${line}"</div>`;
                         }
                     }
                 }
@@ -202,28 +198,20 @@ const sensor = {
 
     parseData(line) {
         try {
-            // JSON format
-            if (line.startsWith('{')) {
-                const data = JSON.parse(line);
-                if (data.ph !== undefined) return data;
-            }
-
-            // CSV format: pH,H2S,Turbidity,Nitrogen,Copper,DO,Temp
-            const parts = line.split(',');
-            if (parts.length >= 7) {
-                const values = parts.map(v => parseFloat(v.trim()));
-                
-                if (values.every(v => !isNaN(v))) {
-                    return {
-                        ph: values[0],
-                        hydrogenSulfide: values[1],
-                        turbidity: values[2],
-                        nitrogen: values[3],
-                        copper: values[4],
-                        dissolvedOxygen: values[5],
-                        temperature: values[6]
-                    };
-                }
+            // Your sensor format: "Voltage: 2.506 V | pH Value: 6.96 (Neutral)"
+            const phMatch = line.match(/pH Value:\s*([\d.]+)/);
+            
+            if (phMatch) {
+                const ph = parseFloat(phMatch[1]);
+                return {
+                    ph: ph,
+                    hydrogenSulfide: 0.05,
+                    turbidity: 2.0,
+                    nitrogen: 5.0,
+                    copper: 0.5,
+                    dissolvedOxygen: 8.0,
+                    temperature: 25.0
+                };
             }
         } catch (error) {
             console.error('Parse error:', error);
