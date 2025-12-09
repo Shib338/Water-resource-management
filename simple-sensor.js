@@ -77,11 +77,10 @@ const sensor = {
             
             if (readings.length > 0 && this.isReading) {
                 const avgData = this.calculateAverage(readings);
-                const status = avgData.ph < 7 ? 'Acidic' : avgData.ph > 7 ? 'Alkaline' : 'Neutral';
                 this.fillForm(avgData);
-                listDiv.innerHTML += `<div class="alert alert-success mb-2"><strong>📊 AVERAGE:</strong> pH ${avgData.ph.toFixed(2)} (${status}) from ${readings.length} readings</div>`;
+                listDiv.innerHTML += `<div class="alert alert-success mb-2"><strong>📊 AVERAGE:</strong> pH ${avgData.ph.toFixed(2)} (${avgData.status}) from ${readings.length} readings</div>`;
                 listDiv.scrollTop = listDiv.scrollHeight;
-                ui.showNotification(`✅ pH ${avgData.ph.toFixed(2)} (${status})`, 'success');
+                ui.showNotification(`✅ pH ${avgData.ph.toFixed(2)} (${avgData.status})`, 'success');
                 
                 if (this.isReading) {
                     statusDiv.innerHTML = '<i class="bi bi-clock text-warning"></i> Waiting 5 seconds...';
@@ -111,17 +110,13 @@ const sensor = {
 
             while (this.isReading && (Date.now() - startTime) < duration) {
                 const { value, done } = await this.reader.read();
-                if (done) {
-                    console.log('Reader done');
-                    break;
-                }
+                if (done) break;
 
                 dataReceived = true;
                 const chunk = new TextDecoder().decode(value);
                 buffer += chunk;
                 
-                console.log('RAW DATA:', chunk);
-                listDiv.innerHTML += `<div class="text-muted small">Raw: ${chunk.replace(/\r/g, '\\r').replace(/\n/g, '\\n')}</div>`;
+                console.log('RAW:', chunk);
 
                 const lines = buffer.split(/[\r\n]+/);
                 buffer = lines.pop() || '';
@@ -129,17 +124,12 @@ const sensor = {
                 for (let line of lines) {
                     line = line.trim();
                     if (line.length > 0) {
-                        console.log('Processing line:', line);
-                        listDiv.innerHTML += `<div class="text-info small">Line: "${line}"</div>`;
                         const data = this.parseData(line);
                         if (data) {
                             readings.push(data);
-                            const status = data.ph < 7 ? 'Acidic' : data.ph > 7 ? 'Alkaline' : 'Neutral';
                             statusDiv.innerHTML = `<i class="bi bi-hourglass-split text-primary"></i> Reading ${readings.length}...`;
-                            listDiv.innerHTML += `<div class="mb-1"><strong>#${readings.length}:</strong> pH ${data.ph.toFixed(2)} (${status})</div>`;
+                            listDiv.innerHTML += `<div class="mb-1"><strong>#${readings.length}:</strong> pH ${data.ph.toFixed(2)} (${data.status})</div>`;
                             listDiv.scrollTop = listDiv.scrollHeight;
-                        } else {
-                            console.log('⚠️ Skipped invalid/garbage data');
                         }
                     }
                 }
@@ -148,18 +138,17 @@ const sensor = {
             this.reader.releaseLock();
             
             if (!dataReceived) {
-                console.log('❌ NO DATA RECEIVED FROM SENSOR!');
-                listDiv.innerHTML += '<div class="alert alert-danger">NO DATA RECEIVED! Check sensor connection and baud rate.</div>';
+                listDiv.innerHTML += '<div class="alert alert-danger">NO DATA! Check connection.</div>';
             }
         } catch (error) {
-            console.error('❌ Read error:', error);
+            console.error('Read error:', error);
             listDiv.innerHTML += `<div class="alert alert-danger">Error: ${error.message}</div>`;
             if (this.reader) {
                 try { this.reader.releaseLock(); } catch (e) {}
             }
         }
         
-        console.log(`Cycle complete. Collected ${readings.length} readings`);
+        console.log(`Collected ${readings.length} readings`);
         return readings;
     },
 
@@ -169,29 +158,21 @@ const sensor = {
     },
 
     calculateAverage(readings) {
-        const sum = {
-            ph: 0,
-            hydrogenSulfide: 0,
-            turbidity: 0,
-            nitrogen: 0,
-            copper: 0,
-            dissolvedOxygen: 0,
-            temperature: 0
-        };
-
-        readings.forEach(reading => {
-            sum.ph += reading.ph;
-            sum.hydrogenSulfide += reading.hydrogenSulfide;
-            sum.turbidity += reading.turbidity;
-            sum.nitrogen += reading.nitrogen;
-            sum.copper += reading.copper;
-            sum.dissolvedOxygen += reading.dissolvedOxygen;
-            sum.temperature += reading.temperature;
+        const sum = { ph: 0, hydrogenSulfide: 0, turbidity: 0, nitrogen: 0, copper: 0, dissolvedOxygen: 0, temperature: 0 };
+        readings.forEach(r => {
+            sum.ph += r.ph;
+            sum.hydrogenSulfide += r.hydrogenSulfide;
+            sum.turbidity += r.turbidity;
+            sum.nitrogen += r.nitrogen;
+            sum.copper += r.copper;
+            sum.dissolvedOxygen += r.dissolvedOxygen;
+            sum.temperature += r.temperature;
         });
-
         const count = readings.length;
+        const avgPh = sum.ph / count;
         return {
-            ph: sum.ph / count,
+            ph: avgPh,
+            status: avgPh < 6.5 ? 'Acidic' : avgPh > 7.5 ? 'Alkaline' : 'Neutral',
             hydrogenSulfide: sum.hydrogenSulfide / count,
             turbidity: sum.turbidity / count,
             nitrogen: sum.nitrogen / count,
@@ -203,30 +184,22 @@ const sensor = {
 
     parseData(line) {
         try {
-            line = line.trim();
-            if (line.length < 5 || line.length > 200) return null;
+            if (line.length < 10) return null;
+            if (line.includes('===') || line.includes('Initializing') || line.includes('Ready')) return null;
             
-            // Skip Arduino initialization messages
-            if (line.includes('===') || line.includes('Initializing') || 
-                line.includes('Ready') || line.includes('Monitor')) {
-                return null;
-            }
+            // Arduino format: "Voltage: 2.506 V | pH Value: 6.96 (Acidic)"
+            const match = line.match(/pH Value:\s*([\d.]+)\s*\(([^)]+)\)/);
             
-            // Format: "Voltage: 2.506 V | pH Value: 6.96 (Neutral)"
-            const phMatch = line.match(/pH Value:\s*([\d.]+)/);
-            
-            if (phMatch) {
-                const ph = parseFloat(phMatch[1]);
+            if (match) {
+                const ph = parseFloat(match[1]);
+                const status = match[2].trim();
                 
-                // Validate pH range (0-14)
-                if (isNaN(ph) || ph < 0 || ph > 14) {
-                    console.log('❌ Invalid pH:', ph);
-                    return null;
-                }
+                if (isNaN(ph) || ph < 0 || ph > 14) return null;
                 
-                console.log('✅ Valid pH:', ph);
+                console.log('✅ pH:', ph, status);
                 return {
                     ph: ph,
+                    status: status,
                     hydrogenSulfide: 0.05,
                     turbidity: 2.0,
                     nitrogen: 5.0,
