@@ -128,6 +128,7 @@ const sensor = {
                 for (let line of lines) {
                     line = line.trim();
                     if (line.length > 0) {
+                        console.log('Processing line:', line);
                         const data = this.parseData(line);
                         if (data) {
                             readings.push(data);
@@ -135,6 +136,8 @@ const sensor = {
                             statusDiv.innerHTML = `<i class="bi bi-hourglass-split text-primary"></i> Reading ${readings.length}...`;
                             listDiv.innerHTML += `<div class="mb-1"><strong>#${readings.length}:</strong> pH ${data.ph.toFixed(2)} (${status})</div>`;
                             listDiv.scrollTop = listDiv.scrollHeight;
+                        } else {
+                            console.log('⚠️ Skipped invalid/garbage data');
                         }
                     }
                 }
@@ -198,11 +201,22 @@ const sensor = {
 
     parseData(line) {
         try {
-            // Your sensor format: "Voltage: 2.506 V | pH Value: 6.96 (Neutral)"
+            line = line.trim();
+            if (line.length < 5 || line.length > 200) return null;
+            
+            // Format: "Voltage: 2.506 V | pH Value: 6.96 (Neutral)"
             const phMatch = line.match(/pH Value:\s*([\d.]+)/);
             
             if (phMatch) {
                 const ph = parseFloat(phMatch[1]);
+                
+                // Validate pH range (0-14)
+                if (isNaN(ph) || ph < 0 || ph > 14) {
+                    console.log('❌ Invalid pH:', ph);
+                    return null;
+                }
+                
+                console.log('✅ Valid pH:', ph);
                 return {
                     ph: ph,
                     hydrogenSulfide: 0.05,
