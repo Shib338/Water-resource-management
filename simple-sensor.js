@@ -83,10 +83,11 @@ const sensor = {
                 ui.showNotification(`✅ pH ${avgData.ph.toFixed(2)} (${status})`, 'success');
             }
             
-            // Wait 5 seconds
+            // Wait 5 seconds then clear
             if (this.isReading) {
                 statusDiv.innerHTML = '<i class="bi bi-clock text-warning"></i> Waiting 5 seconds...';
                 await new Promise(resolve => setTimeout(resolve, 5000));
+                listDiv.innerHTML = '';
             }
         }
         
@@ -101,7 +102,7 @@ const sensor = {
         const startTime = Date.now();
         const duration = 5000;
         
-        listDiv.innerHTML += '<hr><div class="text-primary"><strong>🔄 Cycle started...</strong></div>';
+        listDiv.innerHTML = '<div class="text-primary"><strong>🔄 Cycle started...</strong></div>';
         console.log('🔄 Starting new cycle');
         
         try {
