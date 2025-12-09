@@ -121,6 +121,7 @@ const sensor = {
                 buffer += chunk;
                 
                 console.log('RAW DATA:', chunk);
+                listDiv.innerHTML += `<div class="text-muted small">Raw: ${chunk.replace(/\r/g, '\\r').replace(/\n/g, '\\n')}</div>`;
 
                 const lines = buffer.split(/[\r\n]+/);
                 buffer = lines.pop() || '';
@@ -129,6 +130,7 @@ const sensor = {
                     line = line.trim();
                     if (line.length > 0) {
                         console.log('Processing line:', line);
+                        listDiv.innerHTML += `<div class="text-info small">Line: "${line}"</div>`;
                         const data = this.parseData(line);
                         if (data) {
                             readings.push(data);
