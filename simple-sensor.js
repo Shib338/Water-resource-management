@@ -1,3 +1,9 @@
+/**
+ * Sensor Management System
+ * @global
+ */
+
+/* global ui */
 const sensor = {
     port: null,
     reader: null,
@@ -33,18 +39,24 @@ const sensor = {
                 readBtn.disabled = false;
                 document.getElementById('monitorBtn').disabled = false;
                 statusDiv.innerHTML = '<i class="bi bi-check-circle text-success"></i> Connected! Click Read Data';
-                ui.showNotification('Sensor connected!', 'success');
+                if (typeof ui !== 'undefined') {
+                    ui.showNotification('Sensor connected!', 'success');
+                }
                 console.log('✅ Sensor connected');
             } catch (error) {
                 console.error('Connection error:', error);
                 statusDiv.innerHTML = '<i class="bi bi-x-circle text-danger"></i> Failed: ' + error.message;
-                ui.showNotification('Connection failed', 'danger');
+                if (typeof ui !== 'undefined') {
+                    ui.showNotification('Connection failed', 'danger');
+                }
             }
         };
 
         readBtn.onclick = async () => {
             if (!this.isConnected) {
-                ui.showNotification('Connect sensor first!', 'warning');
+                if (typeof ui !== 'undefined') {
+                    ui.showNotification('Connect sensor first!', 'warning');
+                }
                 return;
             }
 
@@ -78,9 +90,11 @@ const sensor = {
             if (readings.length > 0 && this.isReading) {
                 const avgData = this.calculateAverage(readings);
                 this.fillForm(avgData);
-                listDiv.innerHTML += `<div class="alert alert-success mb-2"><strong>📊 AVERAGE:</strong> pH ${avgData.ph.toFixed(2)} (${avgData.status}) from ${readings.length} readings</div>`;
+                listDiv.innerHTML += `<div class="alert alert-success mb-2"><strong>📊 AVERAGE:</strong> pH ${avgData.ph.toFixed(2)} (${avgData.status}), Heavy Metal ${avgData.heavyMetal.toFixed(3)} mg/L from ${readings.length} readings</div>`;
                 listDiv.scrollTop = listDiv.scrollHeight;
-                ui.showNotification(`✅ pH ${avgData.ph.toFixed(2)} (${avgData.status})`, 'success');
+                if (typeof ui !== 'undefined') {
+                    ui.showNotification(`✅ pH ${avgData.ph.toFixed(2)} (${avgData.status}), HM ${avgData.heavyMetal.toFixed(3)}`, 'success');
+                }
                 
                 if (this.isReading) {
                     statusDiv.innerHTML = '<i class="bi bi-clock text-warning"></i> Waiting 5 seconds...';
@@ -128,7 +142,7 @@ const sensor = {
                         if (data) {
                             readings.push(data);
                             statusDiv.innerHTML = `<i class="bi bi-hourglass-split text-primary"></i> Reading ${readings.length}...`;
-                            listDiv.innerHTML += `<div class="mb-1"><strong>#${readings.length}:</strong> pH ${data.ph.toFixed(2)} (${data.status})</div>`;
+                            listDiv.innerHTML += `<div class="mb-1"><strong>#${readings.length}:</strong> pH ${data.ph.toFixed(2)} (${data.status}), Heavy Metal ${data.heavyMetal.toFixed(3)} mg/L</div>`;
                             listDiv.scrollTop = listDiv.scrollHeight;
                         }
                     }
@@ -158,27 +172,17 @@ const sensor = {
     },
 
     calculateAverage(readings) {
-        const sum = { ph: 0, hydrogenSulfide: 0, turbidity: 0, nitrogen: 0, copper: 0, dissolvedOxygen: 0, temperature: 0 };
+        const sum = { ph: 0, heavyMetal: 0 };
         readings.forEach(r => {
             sum.ph += r.ph;
-            sum.hydrogenSulfide += r.hydrogenSulfide;
-            sum.turbidity += r.turbidity;
-            sum.nitrogen += r.nitrogen;
-            sum.copper += r.copper;
-            sum.dissolvedOxygen += r.dissolvedOxygen;
-            sum.temperature += r.temperature;
+            sum.heavyMetal += r.heavyMetal;
         });
         const count = readings.length;
         const avgPh = sum.ph / count;
         return {
             ph: avgPh,
             status: avgPh < 6.5 ? 'Acidic' : avgPh > 7.5 ? 'Alkaline' : 'Neutral',
-            hydrogenSulfide: sum.hydrogenSulfide / count,
-            turbidity: sum.turbidity / count,
-            nitrogen: sum.nitrogen / count,
-            copper: sum.copper / count,
-            dissolvedOxygen: sum.dissolvedOxygen / count,
-            temperature: sum.temperature / count
+            heavyMetal: sum.heavyMetal / count
         };
     },
 
@@ -200,12 +204,7 @@ const sensor = {
                 return {
                     ph: ph,
                     status: status,
-                    hydrogenSulfide: 0.05,
-                    turbidity: 2.0,
-                    nitrogen: 5.0,
-                    copper: 0.5,
-                    dissolvedOxygen: 8.0,
-                    temperature: 25.0
+                    heavyMetal: Math.random() * 0.4 + 0.1 // Random value between 0.1-0.5 mg/L
                 };
             }
         } catch (error) {
@@ -216,27 +215,19 @@ const sensor = {
 
     fillForm(data) {
         document.getElementById('ph').value = data.ph.toFixed(2);
-        document.getElementById('hydrogenSulfide').value = data.hydrogenSulfide.toFixed(3);
-        document.getElementById('turbidity').value = data.turbidity.toFixed(2);
-        document.getElementById('nitrogen').value = data.nitrogen.toFixed(2);
-        document.getElementById('copper').value = data.copper.toFixed(2);
-        document.getElementById('dissolvedOxygen').value = data.dissolvedOxygen.toFixed(2);
-        document.getElementById('temperature').value = data.temperature.toFixed(1);
+        document.getElementById('heavyMetal').value = data.heavyMetal.toFixed(3);
         console.log('✅ Form updated');
     },
 
     testFill() {
         const testData = {
             ph: 7.2,
-            hydrogenSulfide: 0.05,
-            turbidity: 2.3,
-            nitrogen: 5.1,
-            copper: 0.8,
-            dissolvedOxygen: 8.5,
-            temperature: 22.5
+            heavyMetal: 0.25
         };
         this.fillForm(testData);
-        ui.showNotification('✅ Test data filled!', 'success');
+        if (typeof ui !== 'undefined') {
+            ui.showNotification('✅ Test data filled!', 'success');
+        }
         console.log('🧪 Test data:', testData);
     },
 

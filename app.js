@@ -1,25 +1,35 @@
 /**
  * Water Quality Management System - Firebase Cloud Storage
+ * @global
  */
 
+/* global CONFIG, ui, charts, sensor, admin, FirebaseDB */
 const app = {
     readings: [],
     isLoading: false,
 
     init() {
-        this.readings = [];
-        this.setupEventListeners();
-        this.validateBrowser();
-        ui.showPage('dashboard');
-        ui.updateDashboard([]);
-        this.updateReports();
-        if (typeof charts !== 'undefined' && charts.updateCharts) {
-            charts.updateCharts([]);
+        try {
+            this.readings = [];
+            this.setupEventListeners();
+            this.validateBrowser();
+            if (typeof ui !== 'undefined') {
+                ui.showPage('dashboard');
+                ui.updateDashboard([]);
+            }
+            this.updateReports();
+            if (typeof charts !== 'undefined' && charts.updateCharts) {
+                charts.updateCharts([]);
+            }
+            if (typeof sensor !== 'undefined' && sensor.init) {
+                sensor.init();
+            }
+            const totalEl = document.getElementById('totalReadings');
+            if (totalEl) totalEl.textContent = '0';
+            console.log('✅ App initialized successfully');
+        } catch (error) {
+            console.error('App initialization error:', error);
         }
-        if (typeof sensor !== 'undefined' && sensor.init) {
-            sensor.init();
-        }
-        document.getElementById('totalReadings').textContent = '0';
     },
 
     validateBrowser() {
@@ -49,7 +59,7 @@ const app = {
     },
 
     setupFieldValidation() {
-        const fields = ['ph', 'hydrogenSulfide', 'turbidity', 'nitrogen', 'copper', 'dissolvedOxygen', 'temperature'];
+        const fields = ['ph', 'heavyMetal'];
         
         fields.forEach(fieldId => {
             const field = document.getElementById(fieldId);
@@ -93,33 +103,41 @@ const app = {
         try {
             const locationElement = document.getElementById('location');
             if (!locationElement) {
-                ui.showNotification('Form error: Location field not found', 'error');
+                if (typeof ui !== 'undefined') {
+                    ui.showNotification('Form error: Location field not found', 'error');
+                }
                 return;
             }
             
             const location = locationElement.value.trim();
             
             if (!location) {
-                ui.showNotification('Location is required', 'error');
+                if (typeof ui !== 'undefined') {
+                    ui.showNotification('Location is required', 'error');
+                }
                 locationElement.focus();
                 return;
             }
 
-            const fields = ['ph', 'hydrogenSulfide', 'turbidity', 'nitrogen', 'copper', 'dissolvedOxygen', 'temperature'];
+            const fields = ['ph', 'heavyMetal'];
             const values = {};
             let hasErrors = false;
 
             for (const field of fields) {
                 const element = document.getElementById(field);
                 if (!element) {
-                    ui.showNotification(`Form error: ${field} field not found`, 'error');
+                    if (typeof ui !== 'undefined') {
+                        ui.showNotification(`Form error: ${field} field not found`, 'error');
+                    }
                     return;
                 }
                 
                 const value = parseFloat(element.value);
                 
                 if (isNaN(value) || value < 0) {
-                    ui.showNotification(`Invalid ${field} value. Please enter a positive number.`, 'error');
+                    if (typeof ui !== 'undefined') {
+                        ui.showNotification(`Invalid ${field} value. Please enter a positive number.`, 'error');
+                    }
                     element.focus();
                     return;
                 }
@@ -132,19 +150,23 @@ const app = {
             }
 
             if (hasErrors) {
-                ui.showNotification('Some values are outside normal ranges. Data saved with warnings.', 'warning');
+                if (typeof ui !== 'undefined') {
+                    ui.showNotification('Some values are outside normal ranges. Data saved with warnings.', 'warning');
+                }
             }
 
             this.addReading(location, values);
         } catch (error) {
             console.error('Validation error:', error);
-            ui.showNotification('Error validating form data. Please try again.', 'error');
+            if (typeof ui !== 'undefined') {
+                ui.showNotification('Error validating form data. Please try again.', 'error');
+            }
         }
     },
 
     async loadData() {
         try {
-            this.readings = await FirebaseDB.loadReadings();
+            this.readings = (typeof FirebaseDB !== 'undefined') ? await FirebaseDB.loadReadings() : [];
             
             this.readings = this.readings.filter(reading => {
                 return reading && typeof reading === 'object' && reading.timestamp;
@@ -153,7 +175,9 @@ const app = {
             const totalEl = document.getElementById('totalReadings');
             if (totalEl) totalEl.textContent = this.readings.length;
             
-            ui.updateDashboard(this.readings);
+            if (typeof ui !== 'undefined') {
+                ui.updateDashboard(this.readings);
+            }
             this.updateReports();
             if (typeof charts !== 'undefined' && charts.updateCharts) {
                 charts.updateCharts(this.readings);
@@ -163,21 +187,33 @@ const app = {
         } catch (error) {
             console.error('Load error:', error);
             this.readings = [];
-            ui.updateDashboard([]);
+            if (typeof ui !== 'undefined') {
+                ui.updateDashboard([]);
+            }
         }
     },
 
     resetDisplay() {
-        this.readings = [];
-        document.getElementById('totalReadings').textContent = '0';
-        ui.updateDashboard([]);
-        this.updateReports();
-        if (typeof charts !== 'undefined' && charts.updateCharts) {
-            charts.updateCharts([]);
+        try {
+            this.readings = [];
+            const totalEl = document.getElementById('totalReadings');
+            if (totalEl) totalEl.textContent = '0';
+            if (typeof ui !== 'undefined') {
+                ui.updateDashboard([]);
+                ui.showPage('dashboard');
+                ui.showNotification('Display refreshed successfully', 'success');
+            }
+            this.updateReports();
+            if (typeof charts !== 'undefined' && charts.updateCharts) {
+                charts.updateCharts([]);
+            }
+            console.log('🔄 Display cleared - Firebase data intact');
+        } catch (error) {
+            console.error('Reset display error:', error);
+            if (typeof ui !== 'undefined') {
+                ui.showNotification('Error refreshing display', 'error');
+            }
         }
-        ui.showPage('dashboard');
-        ui.showNotification('Successful', 'success');
-        console.log('🔄 Display cleared - Firebase data intact');
     },
 
 
@@ -191,15 +227,16 @@ const app = {
                 time: new Date().toLocaleTimeString(),
                 location: location.trim(),
                 ...values,
-                oxygen: values.dissolvedOxygen,
                 source: 'manual'
             };
 
-            const saved = await FirebaseDB.saveReading(reading);
+            const saved = (typeof FirebaseDB !== 'undefined') ? await FirebaseDB.saveReading(reading) : false;
             
             if (saved) {
                 this.readings = [reading];
-                ui.updateDashboard(this.readings);
+                if (typeof ui !== 'undefined') {
+                    ui.updateDashboard(this.readings);
+                }
                 this.updateReports();
                 if (typeof charts !== 'undefined' && charts.updateCharts) {
                     charts.updateCharts(this.readings);
@@ -212,13 +249,19 @@ const app = {
                     el.classList.remove('is-valid', 'is-invalid');
                 });
                 
-                ui.showNotification('✅ Water quality reading saved to cloud database', 'success');
+                if (typeof ui !== 'undefined') {
+                    ui.showNotification('✅ Water quality reading saved to cloud database', 'success');
+                }
             } else {
-                ui.showNotification('Error saving reading. Please try again.', 'error');
+                if (typeof ui !== 'undefined') {
+                    ui.showNotification('Error saving reading. Please try again.', 'error');
+                }
             }
         } catch (error) {
             console.error('Error adding reading:', error);
-            ui.showNotification('Error saving reading. Please try again.', 'error');
+            if (typeof ui !== 'undefined') {
+                ui.showNotification('Error saving reading. Please try again.', 'error');
+            }
         }
     },
 
@@ -230,13 +273,17 @@ const app = {
 
     exportData() {
         // Check if admin is logged in
-        if (!admin.isLoggedIn) {
-            ui.showNotification('Admin login required to export data!', 'error');
+        if (typeof admin === 'undefined' || !admin.isLoggedIn) {
+            if (typeof ui !== 'undefined') {
+                ui.showNotification('Admin login required to export data!', 'error');
+            }
             return;
         }
 
         if (this.readings.length === 0) {
-            ui.showNotification('No data available to export', 'warning');
+            if (typeof ui !== 'undefined') {
+                ui.showNotification('No data available to export', 'warning');
+            }
             return;
         }
 
@@ -245,7 +292,9 @@ const app = {
         });
 
         if (validReadings.length === 0) {
-            ui.showNotification('No valid data to export', 'error');
+            if (typeof ui !== 'undefined') {
+                ui.showNotification('No valid data to export', 'error');
+            }
             return;
         }
 
@@ -263,38 +312,51 @@ const app = {
         
         URL.revokeObjectURL(url);
         
-        ui.showNotification(`Exported ${validReadings.length} readings successfully`, 'success');
+        if (typeof ui !== 'undefined') {
+            ui.showNotification(`Exported ${validReadings.length} readings successfully`, 'success');
+        }
     },
 
     async clearAllData() {
         // Check if admin is logged in
-        if (!admin.isLoggedIn) {
-            ui.showNotification('Admin login required to delete data!', 'error');
+        if (typeof admin === 'undefined' || !admin.isLoggedIn) {
+            if (typeof ui !== 'undefined') {
+                ui.showNotification('Admin login required to delete data!', 'error');
+            }
             return;
         }
 
-        const totalInCloud = (await FirebaseDB.loadReadings()).length;
+        const totalInCloud = (typeof FirebaseDB !== 'undefined') ? (await FirebaseDB.loadReadings()).length : 0;
         
         if (totalInCloud === 0) {
-            ui.showNotification('No data in cloud database to delete', 'info');
+            if (typeof ui !== 'undefined') {
+                ui.showNotification('No data in cloud database to delete', 'info');
+            }
             return;
         }
         
         const confirmed = confirm(`⚠️ WARNING: Delete all ${totalInCloud} readings from Firebase cloud database?\n\nThis will PERMANENTLY delete all data and cannot be undone!`);
         
         if (confirmed) {
-            const cleared = await FirebaseDB.clearAllData();
+            const cleared = (typeof FirebaseDB !== 'undefined') ? await FirebaseDB.clearAllData() : false;
             if (cleared) {
                 this.readings = [];
-                document.getElementById('totalReadings').textContent = '0';
-                ui.updateDashboard([]);
+                const totalEl = document.getElementById('totalReadings');
+                if (totalEl) totalEl.textContent = '0';
+                if (typeof ui !== 'undefined') {
+                    ui.updateDashboard([]);
+                }
                 this.updateReports();
                 if (typeof charts !== 'undefined' && charts.updateCharts) {
                     charts.updateCharts([]);
                 }
-                ui.showNotification('🗑️ All data permanently deleted from Firebase', 'info');
+                if (typeof ui !== 'undefined') {
+                    ui.showNotification('🗑️ All data permanently deleted from Firebase', 'info');
+                }
             } else {
-                ui.showNotification('Error deleting data from Firebase', 'error');
+                if (typeof ui !== 'undefined') {
+                    ui.showNotification('Error deleting data from Firebase', 'error');
+                }
             }
         }
     },
@@ -310,7 +372,9 @@ const app = {
     },
 
     showPage(pageId) {
-        ui.showPage(pageId);
+        if (typeof ui !== 'undefined') {
+            ui.showPage(pageId);
+        }
     },
 
     updateReports() {
@@ -330,9 +394,7 @@ const app = {
                                     <p class="text-muted small">${new Date(reading.timestamp).toLocaleString()}</p>
                                     <div class="row">
                                         <div class="col-6"><small>pH: ${reading.ph?.toFixed(2)}</small></div>
-                                        <div class="col-6"><small>Temp: ${reading.temperature?.toFixed(1)}°C</small></div>
-                                        <div class="col-6"><small>O₂: ${reading.dissolvedOxygen?.toFixed(2)} mg/L</small></div>
-                                        <div class="col-6"><small>Turbidity: ${reading.turbidity?.toFixed(2)} NTU</small></div>
+                                        <div class="col-6"><small>Heavy Metal: ${reading.heavyMetal?.toFixed(3)} mg/L</small></div>
                                     </div>
                                 </div>
                             </div>

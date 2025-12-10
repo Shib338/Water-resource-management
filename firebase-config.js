@@ -1,8 +1,10 @@
 /**
  * Firebase Configuration - Cloud Database
  * Replace with your Firebase project credentials
+ * @global
  */
 
+/* global firebase, CONFIG */
 // Firebase configuration - CONNECTED TO CLOUD DATABASE
 const firebaseConfig = {
     apiKey: "AIzaSyCLVGuidDrlvPe_mQzpt-0h7tT6es17WII",

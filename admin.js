@@ -1,4 +1,9 @@
-// Admin Panel - NO AUTO-LOGIN - Version 2025-01-21
+/**
+ * Admin Panel - NO AUTO-LOGIN - Version 2025-01-21
+ * @global
+ */
+
+/* global ui, FirebaseDB, app, bootstrap */
 const admin = {
     isAdminMode: false,
     isLoggedIn: false,
@@ -64,8 +69,12 @@ const admin = {
             return;
         }
         
-        const modal = new bootstrap.Modal(modalEl);
-        modal.show();
+        if (typeof bootstrap !== 'undefined') {
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        } else {
+            console.error('Bootstrap not loaded');
+        }
         console.log('📋 Login modal displayed');
     },
 
@@ -92,7 +101,7 @@ const admin = {
             
             // Close modal
             const modalEl = document.getElementById('loginModal');
-            if (modalEl) {
+            if (modalEl && typeof bootstrap !== 'undefined') {
                 const modal = bootstrap.Modal.getInstance(modalEl);
                 if (modal) modal.hide();
             }
@@ -100,10 +109,14 @@ const admin = {
             // Load data
             await this.loadAdminData();
             
-            ui.showNotification('✅ Admin login successful!', 'success');
+            if (typeof ui !== 'undefined') {
+                ui.showNotification('✅ Admin login successful!', 'success');
+            }
             console.log('✅ Admin logged in');
         } else {
-            ui.showNotification('❌ Invalid credentials!', 'error');
+            if (typeof ui !== 'undefined') {
+                ui.showNotification('❌ Invalid credentials!', 'error');
+            }
             console.log('❌ Login failed');
         }
     },
@@ -128,17 +141,25 @@ const admin = {
         const adminText = document.getElementById('adminText');
         if (adminText) adminText.textContent = 'Admin';
         
-        ui.showNotification('Logged out', 'info');
+        if (typeof ui !== 'undefined') {
+            ui.showNotification('Logged out', 'info');
+        }
     },
 
     async loadAdminData() {
         try {
-            this.allData = await FirebaseDB.loadReadings();
-            this.filteredData = [...this.allData];
-            await app.loadData();
+            if (typeof FirebaseDB !== 'undefined') {
+                this.allData = await FirebaseDB.loadReadings();
+                this.filteredData = [...this.allData];
+            }
+            if (typeof app !== 'undefined' && app.loadData) {
+                await app.loadData();
+            }
             console.log('📊 Admin data loaded:', this.allData.length, 'readings');
         } catch (error) {
             console.error('Error loading admin data:', error);
+            this.allData = [];
+            this.filteredData = [];
         }
     }
 };

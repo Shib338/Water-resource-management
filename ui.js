@@ -1,7 +1,9 @@
 /**
  * UI Management Functions
+ * @global
  */
 
+/* global app, Chart */
 const ui = {
     init() {
         this.setupNavigation();
@@ -12,7 +14,7 @@ const ui = {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
                 const page = e.currentTarget.dataset.page;
-                if (page) {
+                if (page && typeof app !== 'undefined') {
                     app.showPage(page);
                 }
             });
@@ -20,26 +22,33 @@ const ui = {
     },
 
     showPage(pageId) {
-        document.querySelectorAll('.page-content').forEach(page => {
-            page.classList.remove('active');
-        });
+        try {
+            document.querySelectorAll('.page-content').forEach(page => {
+                page.classList.remove('active');
+            });
 
-        const targetPage = document.getElementById(`${pageId}-page`);
-        if (targetPage) {
-            targetPage.classList.add('active');
+            const targetPage = document.getElementById(`${pageId}-page`);
+            if (targetPage) {
+                targetPage.classList.add('active');
+            } else {
+                console.warn(`Page not found: ${pageId}-page`);
+                return;
+            }
+
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            const activeLink = document.querySelector(`[data-page="${pageId}"]`);
+            if (activeLink) {
+                activeLink.classList.add('active');
+            }
+
+            if (pageId === 'output' && typeof app !== 'undefined') app.updateReports();
+            if (pageId === 'analytics' && typeof app !== 'undefined') app.updateAnalytics();
+        } catch (error) {
+            console.error('Show page error:', error);
         }
-
-        document.querySelectorAll('.nav-link').forEach(link => {
-            link.classList.remove('active');
-        });
-        
-        const activeLink = document.querySelector(`[data-page="${pageId}"]`);
-        if (activeLink) {
-            activeLink.classList.add('active');
-        }
-
-        if (pageId === 'output') app.updateReports();
-        if (pageId === 'analytics') app.updateAnalytics();
     },
 
     showNotification(message, type = 'info') {
@@ -84,7 +93,7 @@ const ui = {
             
             if (metricCards) {
                 metricCards.innerHTML = `
-                    <div class="col-md-3">
+                    <div class="col-md-6">
                         <div class="card text-white bg-gradient-primary">
                             <div class="card-body text-center">
                                 <h3>${latest.ph?.toFixed(2) || 'N/A'}</h3>
@@ -92,27 +101,11 @@ const ui = {
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card text-white bg-gradient-success">
+                    <div class="col-md-6">
+                        <div class="card text-white bg-gradient-danger">
                             <div class="card-body text-center">
-                                <h3>${latest.temperature?.toFixed(1) || 'N/A'}°C</h3>
-                                <p class="mb-0">Temperature</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card text-white bg-gradient-info">
-                            <div class="card-body text-center">
-                                <h3>${latest.dissolvedOxygen?.toFixed(2) || 'N/A'}</h3>
-                                <p class="mb-0">Dissolved O₂ (mg/L)</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card text-white bg-gradient-warning">
-                            <div class="card-body text-center">
-                                <h3>${latest.turbidity?.toFixed(2) || 'N/A'}</h3>
-                                <p class="mb-0">Turbidity (NTU)</p>
+                                <h3>${latest.heavyMetal?.toFixed(3) || 'N/A'}</h3>
+                                <p class="mb-0">Heavy Metal (mg/L)</p>
                             </div>
                         </div>
                     </div>
@@ -137,7 +130,7 @@ const ui = {
                     </div>
                     
                     <div class="row g-3">
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <div class="card border-primary">
                                 <div class="card-body text-center">
                                     <h6 class="text-muted mb-2">pH Level</h6>
@@ -145,51 +138,11 @@ const ui = {
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <div class="card border-success">
-                                <div class="card-body text-center">
-                                    <h6 class="text-muted mb-2">Temperature</h6>
-                                    <h3 class="text-success mb-0">${latest.temperature?.toFixed(1)}°C</h3>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card border-info">
-                                <div class="card-body text-center">
-                                    <h6 class="text-muted mb-2">Dissolved Oxygen</h6>
-                                    <h3 class="text-info mb-0">${latest.dissolvedOxygen?.toFixed(2)} mg/L</h3>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <div class="card border-danger">
                                 <div class="card-body text-center">
-                                    <h6 class="text-muted mb-2">Turbidity</h6>
-                                    <h3 class="text-danger mb-0">${latest.turbidity?.toFixed(2)} NTU</h3>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card border-warning">
-                                <div class="card-body text-center">
-                                    <h6 class="text-muted mb-2">Hydrogen Sulfide</h6>
-                                    <h3 class="text-warning mb-0">${latest.hydrogenSulfide?.toFixed(3)} mg/L</h3>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card border-secondary">
-                                <div class="card-body text-center">
-                                    <h6 class="text-muted mb-2">Nitrogen</h6>
-                                    <h3 class="text-secondary mb-0">${latest.nitrogen?.toFixed(2)} mg/L</h3>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card border-dark">
-                                <div class="card-body text-center">
-                                    <h6 class="text-muted mb-2">Copper</h6>
-                                    <h3 class="text-dark mb-0">${latest.copper?.toFixed(2)} mg/L</h3>
+                                    <h6 class="text-muted mb-2">Heavy Metal</h6>
+                                    <h3 class="text-danger mb-0">${latest.heavyMetal?.toFixed(3)} mg/L</h3>
                                 </div>
                             </div>
                         </div>
@@ -197,34 +150,25 @@ const ui = {
                 `;
             }
             
-            // Update Nutrient Analysis
+            // Update Heavy Metal Analysis
             if (nutrientBars) {
                 nutrientBars.innerHTML = `
                     <div class="mb-3">
                         <div class="d-flex justify-content-between mb-1">
-                            <span><strong>Nitrogen</strong></span>
-                            <span>${latest.nitrogen?.toFixed(2)} mg/L</span>
+                            <span><strong>pH Level</strong></span>
+                            <span>${latest.ph?.toFixed(2)}</span>
                         </div>
                         <div class="progress" style="height: 25px;">
-                            <div class="progress-bar bg-success" style="width: ${(latest.nitrogen / 10) * 100}%">${latest.nitrogen?.toFixed(2)}</div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between mb-1">
-                            <span><strong>Copper</strong></span>
-                            <span>${latest.copper?.toFixed(2)} mg/L</span>
-                        </div>
-                        <div class="progress" style="height: 25px;">
-                            <div class="progress-bar bg-warning" style="width: ${(latest.copper / 2) * 100}%">${latest.copper?.toFixed(2)}</div>
+                            <div class="progress-bar bg-primary" style="width: ${(latest.ph / 14) * 100}%">${latest.ph?.toFixed(2)}</div>
                         </div>
                     </div>
                     <div class="mb-0">
                         <div class="d-flex justify-content-between mb-1">
-                            <span><strong>Hydrogen Sulfide</strong></span>
-                            <span>${latest.hydrogenSulfide?.toFixed(3)} mg/L</span>
+                            <span><strong>Heavy Metal</strong></span>
+                            <span>${latest.heavyMetal?.toFixed(3)} mg/L</span>
                         </div>
                         <div class="progress" style="height: 25px;">
-                            <div class="progress-bar bg-danger" style="width: ${(latest.hydrogenSulfide / 0.1) * 100}%">${latest.hydrogenSulfide?.toFixed(3)}</div>
+                            <div class="progress-bar bg-danger" style="width: ${(latest.heavyMetal / 0.5) * 100}%">${latest.heavyMetal?.toFixed(3)}</div>
                         </div>
                     </div>
                 `;
@@ -232,49 +176,53 @@ const ui = {
             
             // Update Parameter Trends Chart
             if (trendChart && typeof Chart !== 'undefined') {
-                const ctx = trendChart.getContext('2d');
-                if (window.dashboardTrendChart) {
-                    window.dashboardTrendChart.destroy();
-                }
-                
-                const labels = readings.slice(-10).map(r => new Date(r.timestamp).toLocaleTimeString());
-                const phData = readings.slice(-10).map(r => r.ph);
-                const tempData = readings.slice(-10).map(r => r.temperature);
-                
-                window.dashboardTrendChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [
-                            {
-                                label: 'pH Level',
-                                data: phData,
-                                borderColor: '#667eea',
-                                backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                                tension: 0.4,
-                                fill: true
-                            },
-                            {
-                                label: 'Temperature',
-                                data: tempData,
-                                borderColor: '#38ef7d',
-                                backgroundColor: 'rgba(56, 239, 125, 0.1)',
-                                tension: 0.4,
-                                fill: true
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: true }
-                        },
-                        scales: {
-                            y: { beginAtZero: false }
-                        }
+                try {
+                    const ctx = trendChart.getContext('2d');
+                    if (window.dashboardTrendChart) {
+                        window.dashboardTrendChart.destroy();
                     }
-                });
+                    
+                    const labels = readings.slice(-10).map(r => new Date(r.timestamp).toLocaleTimeString());
+                    const phData = readings.slice(-10).map(r => r.ph || 0);
+                    const heavyMetalData = readings.slice(-10).map(r => r.heavyMetal || 0);
+                    
+                    window.dashboardTrendChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [
+                                {
+                                    label: 'pH Level',
+                                    data: phData,
+                                    borderColor: '#667eea',
+                                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                    tension: 0.4,
+                                    fill: true
+                                },
+                                {
+                                    label: 'Heavy Metal (mg/L)',
+                                    data: heavyMetalData,
+                                    borderColor: '#dc3545',
+                                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                                    tension: 0.4,
+                                    fill: true
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: true }
+                            },
+                            scales: {
+                                y: { beginAtZero: false }
+                            }
+                        }
+                    });
+                } catch (error) {
+                    console.error('Chart creation error:', error);
+                }
             }
         } else {
             if (metricCards) {
@@ -284,7 +232,12 @@ const ui = {
                 latestDetails.innerHTML = '<p class="text-muted text-center py-3">No readings available. Add data to begin monitoring.</p>';
             }
             if (nutrientBars) {
-                nutrientBars.innerHTML = '<p class="text-muted">No nutrient data available</p>';
+                nutrientBars.innerHTML = '<p class="text-muted">No parameter data available</p>';
+            }
+            // Clear existing chart
+            if (window.dashboardTrendChart) {
+                window.dashboardTrendChart.destroy();
+                window.dashboardTrendChart = null;
             }
         }
     }
