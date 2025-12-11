@@ -13,19 +13,17 @@ const app = {
             this.readings = [];
             this.setupEventListeners();
             this.validateBrowser();
+            
+            // Load existing data on startup
+            this.loadData();
+            
             if (typeof ui !== 'undefined') {
                 ui.showPage('dashboard');
-                ui.updateDashboard([]);
-            }
-            this.updateReports();
-            if (typeof charts !== 'undefined' && charts.updateCharts) {
-                charts.updateCharts([]);
             }
             if (typeof sensor !== 'undefined' && sensor.init) {
                 sensor.init();
             }
-            const totalEl = document.getElementById('totalReadings');
-            if (totalEl) totalEl.textContent = '0';
+            
             console.log('✅ App initialized successfully');
         } catch (error) {
             console.error('App initialization error:', error);
@@ -172,9 +170,12 @@ const app = {
         try {
             this.readings = (typeof FirebaseDB !== 'undefined') ? await FirebaseDB.loadReadings() : [];
             
-            this.readings = this.readings.filter(reading => {
-                return reading && typeof reading === 'object' && reading.timestamp;
-            });
+            // Filter and sort readings
+            this.readings = this.readings
+                .filter(reading => {
+                    return reading && typeof reading === 'object' && reading.timestamp;
+                })
+                .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
             
             const totalEl = document.getElementById('totalReadings');
             if (totalEl) totalEl.textContent = this.readings.length;
@@ -187,7 +188,7 @@ const app = {
                 charts.updateCharts(this.readings);
             }
             
-            console.log('✅ Loaded', this.readings.length, 'readings from cloud');
+            console.log('✅ Loaded', this.readings.length, 'readings from storage');
         } catch (error) {
             console.error('Load error:', error);
             this.readings = [];
@@ -237,7 +238,9 @@ const app = {
             const saved = (typeof FirebaseDB !== 'undefined') ? await FirebaseDB.saveReading(reading) : false;
             
             if (saved) {
-                this.readings = [reading];
+                // Load all readings from storage to get complete dataset
+                await this.loadData();
+                
                 if (typeof ui !== 'undefined') {
                     ui.updateDashboard(this.readings);
                 }

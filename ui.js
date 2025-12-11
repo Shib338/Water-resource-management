@@ -185,9 +185,11 @@ const ui = {
                         window.dashboardTrendChart.destroy();
                     }
                     
-                    const labels = readings.slice(-10).map(r => new Date(r.timestamp).toLocaleTimeString());
-                    const phData = readings.slice(-10).map(r => r.ph || 0);
-                    const heavyMetalData = readings.slice(-10).map(r => r.heavyMetal || 0);
+                    // Show more readings for better trend visualization
+                    const chartReadings = readings.length > 15 ? readings.slice(-15) : readings;
+                    const labels = chartReadings.map((r, index) => `Reading ${index + 1}`);
+                    const phData = chartReadings.map(r => r.ph || 0);
+                    const heavyMetalData = chartReadings.map(r => r.heavyMetal || 0);
                     
                     window.dashboardTrendChart = new Chart(ctx, {
                         type: 'line',

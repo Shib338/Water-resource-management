@@ -221,14 +221,9 @@ const charts = {
                 this.allCharts[canvasId].destroy();
             }
 
-            const labels = readings.map(r => {
-                try {
-                    return new Date(r.timestamp).toLocaleTimeString();
-                } catch (e) {
-                    return 'Invalid Date';
-                }
-            });
-            const data = readings.map(r => {
+            const chartReadings = validReadings.length > 15 ? validReadings.slice(-15) : validReadings;
+            const labels = chartReadings.map((r, index) => `Reading ${index + 1}`);
+            const data = chartReadings.map(r => {
                 const value = r[parameter];
                 return (typeof value === 'number' && !isNaN(value)) ? value : 0;
             });
