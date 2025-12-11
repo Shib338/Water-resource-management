@@ -30,24 +30,30 @@ const charts = {
 
         console.log('Updating charts with', validReadings.length, 'valid readings');
         
-        // Update statistical summary
-        this.updateStatisticalSummary(validReadings);
-        
-        // Update 2 parameter charts
-        this.updateParameterChart('phChart', validReadings, 'ph', 'pH Level');
-        this.updateParameterChart('heavyMetalChart', validReadings, 'heavyMetal', 'Lead Concentration (PPM)');
-        
-        // Update gauges
-        this.updateGauges(validReadings);
-        
-        // Update quality assessment
-        this.updateQualityAssessment(validReadings);
-        
-        // Update improvement solutions
-        this.updateImprovementSolutions(validReadings);
-        
-        // Update correlations
-        this.updateCorrelations(validReadings);
+        try {
+            // Update statistical summary
+            this.updateStatisticalSummary(validReadings);
+            
+            // Update 2 parameter charts
+            this.updateParameterChart('phChart', validReadings, 'ph', 'pH Level');
+            this.updateParameterChart('heavyMetalChart', validReadings, 'heavyMetal', 'Lead Concentration (PPM)');
+            
+            // Update gauges
+            this.updateGauges(validReadings);
+            
+            // Update quality assessment
+            this.updateQualityAssessment(validReadings);
+            
+            // Update improvement solutions
+            this.updateImprovementSolutions(validReadings);
+            
+            // Update correlations
+            this.updateCorrelations(validReadings);
+            
+            console.log('✅ All charts updated successfully');
+        } catch (error) {
+            console.error('Charts update error:', error);
+        }
     },
 
     clearAllCharts() {
@@ -59,12 +65,16 @@ const charts = {
             }
         });
         
-        // Clear gauges
+        // Clear gauges and show empty state
         ['phGauge', 'heavyMetalGauge'].forEach(id => {
             const canvas = document.getElementById(id);
             if (canvas) {
                 const ctx = canvas.getContext('2d');
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.font = 'bold 16px Arial';
+                ctx.fillStyle = '#999';
+                ctx.textAlign = 'center';
+                ctx.fillText('--', canvas.width/2, canvas.height/2 + 5);
             }
         });
         
@@ -229,6 +239,11 @@ const charts = {
                 return (typeof value === 'number' && !isNaN(value)) ? value : 0;
             });
 
+            // Set colors based on parameter type
+            const isLeadChart = parameter === 'heavyMetal';
+            const borderColor = isLeadChart ? '#dc3545' : '#667eea';
+            const backgroundColor = isLeadChart ? 'rgba(220, 53, 69, 0.1)' : 'rgba(102, 126, 234, 0.1)';
+            
             this.allCharts[canvasId] = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -236,37 +251,80 @@ const charts = {
                     datasets: [{
                         label: label,
                         data: data,
-                        borderColor: '#667eea',
-                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderColor: borderColor,
+                        backgroundColor: backgroundColor,
                         tension: 0.4,
                         fill: true,
-                        borderWidth: 2
+                        borderWidth: 3,
+                        pointBackgroundColor: borderColor,
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { display: true }
+                        legend: { 
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        }
                     },
                     scales: {
-                        y: { beginAtZero: false }
+                        y: { 
+                            beginAtZero: false,
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
                     }
                 }
             });
+            
+            console.log(`✅ Chart created for ${canvasId} with ${data.length} data points`);
         } catch (error) {
             console.error(`Chart creation error for ${canvasId}:`, error);
         }
     },
 
     updateGauges(readings) {
-        if (readings.length === 0) return;
+        if (readings.length === 0) {
+            // Clear gauges when no data
+            ['phGauge', 'heavyMetalGauge'].forEach(id => {
+                const canvas = document.getElementById(id);
+                if (canvas) {
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.font = 'bold 16px Arial';
+                    ctx.fillStyle = '#999';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('--', canvas.width/2, canvas.height/2 + 5);
+                }
+            });
+            return;
+        }
+        
         const latest = readings[readings.length - 1];
         if (!latest) return;
         
         const gauges = [
-            { id: 'phGauge', value: latest.ph || 0, max: 14 },
-            { id: 'heavyMetalGauge', value: latest.heavyMetal || 0, max: 500 }
+            { id: 'phGauge', value: latest.ph || 0, max: 14, color: '#667eea' },
+            { id: 'heavyMetalGauge', value: latest.heavyMetal || 0, max: 1000, color: '#dc3545' }
         ];
         
         gauges.forEach(gauge => {
@@ -275,8 +333,25 @@ const charts = {
                 try {
                     const ctx = canvas.getContext('2d');
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.font = 'bold 20px Arial';
-                    ctx.fillStyle = '#667eea';
+                    
+                    // Draw gauge background
+                    ctx.beginPath();
+                    ctx.arc(canvas.width/2, canvas.height/2, 35, 0, 2 * Math.PI);
+                    ctx.strokeStyle = '#e9ecef';
+                    ctx.lineWidth = 8;
+                    ctx.stroke();
+                    
+                    // Draw gauge value
+                    const percentage = Math.min(gauge.value / gauge.max, 1);
+                    ctx.beginPath();
+                    ctx.arc(canvas.width/2, canvas.height/2, 35, -Math.PI/2, -Math.PI/2 + (2 * Math.PI * percentage));
+                    ctx.strokeStyle = gauge.color;
+                    ctx.lineWidth = 8;
+                    ctx.stroke();
+                    
+                    // Draw text
+                    ctx.font = 'bold 18px Arial';
+                    ctx.fillStyle = gauge.color;
                     ctx.textAlign = 'center';
                     const displayValue = gauge.id === 'heavyMetalGauge' ? gauge.value.toFixed(0) : gauge.value.toFixed(1);
                     ctx.fillText(displayValue, canvas.width/2, canvas.height/2 + 5);
