@@ -153,26 +153,35 @@ const ui = {
                 `;
             }
             
-            // Update Heavy Metal Analysis
+            // Update Lead Analysis
             if (nutrientBars) {
+                const phPercent = Math.min(Math.max((latest.ph / 14) * 100, 0), 100);
+                const leadPercent = Math.min(Math.max((latest.heavyMetal / 1000) * 100, 0), 100);
+                
                 nutrientBars.innerHTML = `
                     <div class="mb-3">
                         <div class="d-flex justify-content-between mb-1">
                             <span><strong>pH Level</strong></span>
-                            <span>${latest.ph?.toFixed(2)}</span>
+                            <span class="badge ${latest.ph >= 6.5 && latest.ph <= 8.5 ? 'bg-success' : 'bg-warning'}">${latest.ph?.toFixed(2)}</span>
                         </div>
                         <div class="progress" style="height: 25px;">
-                            <div class="progress-bar bg-primary" style="width: ${(latest.ph / 14) * 100}%">${latest.ph?.toFixed(2)}</div>
+                            <div class="progress-bar ${latest.ph >= 6.5 && latest.ph <= 8.5 ? 'bg-success' : 'bg-warning'}" style="width: ${phPercent}%">
+                                ${latest.ph?.toFixed(2)}
+                            </div>
                         </div>
+                        <small class="text-muted">Normal range: 6.5 - 8.5</small>
                     </div>
                     <div class="mb-0">
                         <div class="d-flex justify-content-between mb-1">
                             <span><strong>Lead Level</strong></span>
-                            <span>${latest.heavyMetal?.toFixed(0)} PPM</span>
+                            <span class="badge ${latest.heavyMetal <= 500 ? 'bg-success' : 'bg-danger'}">${latest.heavyMetal?.toFixed(0)} PPM</span>
                         </div>
                         <div class="progress" style="height: 25px;">
-                            <div class="progress-bar bg-danger" style="width: ${Math.min((latest.heavyMetal / 500) * 100, 100)}%">${latest.heavyMetal?.toFixed(0)}</div>
+                            <div class="progress-bar ${latest.heavyMetal <= 500 ? 'bg-success' : 'bg-danger'}" style="width: ${leadPercent}%">
+                                ${latest.heavyMetal?.toFixed(0)} PPM
+                            </div>
                         </div>
+                        <small class="text-muted">Safe limit: ≤ 500 PPM</small>
                     </div>
                 `;
             }
@@ -231,13 +240,41 @@ const ui = {
             }
         } else {
             if (metricCards) {
-                metricCards.innerHTML = '<div class="col-12"><div class="alert alert-info">No data available. Add readings to see metrics.</div></div>';
+                metricCards.innerHTML = `
+                    <div class="col-md-6">
+                        <div class="card text-white bg-gradient-secondary">
+                            <div class="card-body text-center">
+                                <h3>--</h3>
+                                <p class="mb-0">pH Level</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card text-white bg-gradient-secondary">
+                            <div class="card-body text-center">
+                                <h3>--</h3>
+                                <p class="mb-0">Lead (PPM)</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
             }
             if (latestDetails) {
-                latestDetails.innerHTML = '<p class="text-muted text-center py-3">No readings available. Add data to begin monitoring.</p>';
+                latestDetails.innerHTML = `
+                    <div class="alert alert-info text-center">
+                        <i class="bi bi-info-circle fs-1 mb-3"></i>
+                        <h5>No Water Quality Data</h5>
+                        <p class="mb-0">Add your first reading to start monitoring water quality parameters.</p>
+                    </div>
+                `;
             }
             if (nutrientBars) {
-                nutrientBars.innerHTML = '<p class="text-muted">No parameter data available</p>';
+                nutrientBars.innerHTML = `
+                    <div class="text-center text-muted">
+                        <i class="bi bi-graph-up fs-1 mb-3"></i>
+                        <p>Parameter analysis will appear here after adding data</p>
+                    </div>
+                `;
             }
             // Clear existing chart
             if (window.dashboardTrendChart) {

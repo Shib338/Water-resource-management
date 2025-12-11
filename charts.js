@@ -121,7 +121,7 @@ const charts = {
             <h6 class="mb-3">Parameter Relationships</h6>
             <div class="mb-3">
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span><strong>pH vs Heavy Metal</strong></span>
+                    <span><strong>pH vs Lead</strong></span>
                     <span class="badge bg-${corrColor}">${corrStatus} ${corrType}</span>
                 </div>
                 <div class="progress" style="height: 8px;">
@@ -137,7 +137,7 @@ const charts = {
                 <div class="progress" style="height: 8px;">
                     <div class="progress-bar bg-info" style="width: ${this.calculateWQI(latest)}%"></div>
                 </div>
-                <small class="text-muted">Based on pH and heavy metal levels</small>
+                <small class="text-muted">Based on pH and lead levels</small>
             </div>
             <div class="mb-3">
                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -221,8 +221,9 @@ const charts = {
                 this.allCharts[canvasId].destroy();
             }
 
-            const chartReadings = validReadings.length > 15 ? validReadings.slice(-15) : validReadings;
-            const labels = chartReadings.map((r, index) => `Reading ${index + 1}`);
+            // Fix: Use readings parameter instead of validReadings
+            const chartReadings = readings.length > 15 ? readings.slice(-15) : readings;
+            const labels = chartReadings.map((r, index) => `#${index + 1}`);
             const data = chartReadings.map(r => {
                 const value = r[parameter];
                 return (typeof value === 'number' && !isNaN(value)) ? value : 0;
@@ -277,7 +278,8 @@ const charts = {
                     ctx.font = 'bold 20px Arial';
                     ctx.fillStyle = '#667eea';
                     ctx.textAlign = 'center';
-                    ctx.fillText(gauge.value.toFixed(1), canvas.width/2, canvas.height/2 + 5);
+                    const displayValue = gauge.id === 'heavyMetalGauge' ? gauge.value.toFixed(0) : gauge.value.toFixed(1);
+                    ctx.fillText(displayValue, canvas.width/2, canvas.height/2 + 5);
                 } catch (error) {
                     console.error(`Gauge update error for ${gauge.id}:`, error);
                 }

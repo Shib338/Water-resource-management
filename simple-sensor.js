@@ -97,10 +97,10 @@ const sensor = {
             if (readings.length > 0 && this.isReading) {
                 const avgData = this.calculateAverage(readings);
                 this.fillForm(avgData);
-                listDiv.innerHTML += `<div class="alert alert-success mb-2"><strong>📊 AVERAGE:</strong> pH ${avgData.ph.toFixed(2)} (${avgData.status}), Heavy Metal ${avgData.heavyMetal.toFixed(3)} mg/L from ${readings.length} readings</div>`;
+                listDiv.innerHTML += `<div class="alert alert-success mb-2"><strong>📊 AVERAGE:</strong> pH ${avgData.ph.toFixed(2)} (${avgData.status}), Lead ${avgData.heavyMetal.toFixed(0)} PPM from ${readings.length} readings</div>`;
                 listDiv.scrollTop = listDiv.scrollHeight;
                 if (typeof ui !== 'undefined') {
-                    ui.showNotification(`✅ pH ${avgData.ph.toFixed(2)} (${avgData.status}), HM ${avgData.heavyMetal.toFixed(3)}`, 'success');
+                    ui.showNotification(`✅ pH ${avgData.ph.toFixed(2)} (${avgData.status}), Lead ${avgData.heavyMetal.toFixed(0)} PPM`, 'success');
                 }
                 
                 if (this.isReading) {
@@ -149,7 +149,7 @@ const sensor = {
                         if (data) {
                             readings.push(data);
                             statusDiv.innerHTML = `<i class="bi bi-hourglass-split text-primary"></i> Reading ${readings.length}...`;
-                            listDiv.innerHTML += `<div class="mb-1"><strong>#${readings.length}:</strong> pH ${data.ph.toFixed(2)} (${data.status}), Heavy Metal ${data.heavyMetal.toFixed(3)} mg/L</div>`;
+                            listDiv.innerHTML += `<div class="mb-1"><strong>#${readings.length}:</strong> pH ${data.ph.toFixed(2)} (${data.status}), Lead ${data.heavyMetal.toFixed(0)} PPM</div>`;
                             listDiv.scrollTop = listDiv.scrollHeight;
                         }
                     }
@@ -235,7 +235,7 @@ const sensor = {
         }
         
         if (hmField && typeof data.heavyMetal === 'number' && !isNaN(data.heavyMetal)) {
-            hmField.value = data.heavyMetal.toFixed(3);
+            hmField.value = data.heavyMetal.toFixed(0);
         }
         
         console.log('✅ Form updated');
