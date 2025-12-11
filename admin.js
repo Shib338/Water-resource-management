@@ -212,7 +212,7 @@ const admin = {
         
         if (normalEl && alertEl) {
             const normal = this.allData.filter(r => 
-                r.ph >= 6.5 && r.ph <= 8.5 && r.heavyMetal <= 500
+                r.ph >= 6.5 && r.ph <= 8.5 && r.heavyMetal >= 50 && r.heavyMetal <= 300
             ).length;
             const alert = this.allData.length - normal;
             

@@ -225,6 +225,10 @@ const app = {
             if (typeof admin !== 'undefined' && admin.isLoggedIn) {
                 // Admin can see all data - reload from database
                 this.loadData();
+                // Update admin statistics
+                if (typeof admin !== 'undefined' && admin.updateAdminStats) {
+                    admin.updateAdminStats();
+                }
                 if (typeof ui !== 'undefined') {
                     ui.showNotification('Admin view: All data refreshed', 'success');
                 }
@@ -253,6 +257,13 @@ const app = {
                         </div>
                     `;
                 }
+                // Clear admin statistics for regular users
+                const totalEl = document.getElementById('totalRecords');
+                const normalEl = document.getElementById('normalRecords');
+                const alertEl = document.getElementById('alertRecords');
+                if (totalEl) totalEl.textContent = '0';
+                if (normalEl) normalEl.textContent = '0';
+                if (alertEl) alertEl.textContent = '0';
             }
         } catch (error) {
             if (typeof ui !== 'undefined') {
