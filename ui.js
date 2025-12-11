@@ -66,7 +66,7 @@ const ui = {
         };
         
         icon.className = `bi ${icons[type] || icons.info}`;
-        text.textContent = message;
+        text.textContent = this.escapeHtml(message || '');
         notification.className = `alert alert-dismissible fade show shadow alert-${type}`;
         notification.style.display = 'block';
         
@@ -113,17 +113,20 @@ const ui = {
             }
             
             if (latestDetails && latest) {
+                const safeLocation = this.escapeHtml(latest.location || 'Unknown');
+                const safeTimestamp = latest.timestamp ? new Date(latest.timestamp).toLocaleString() : 'Unknown';
+                
                 latestDetails.innerHTML = `
                     <div class="card border-0 bg-light mb-3">
                         <div class="card-body">
                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     <h6 class="text-primary"><i class="bi bi-geo-alt"></i> Location</h6>
-                                    <p class="fs-5 mb-0">${latest.location}</p>
+                                    <p class="fs-5 mb-0">${safeLocation}</p>
                                 </div>
                                 <div class="col-md-6">
                                     <h6 class="text-primary"><i class="bi bi-clock"></i> Time</h6>
-                                    <p class="fs-5 mb-0">${new Date(latest.timestamp).toLocaleString()}</p>
+                                    <p class="fs-5 mb-0">${safeTimestamp}</p>
                                 </div>
                             </div>
                         </div>
@@ -240,6 +243,12 @@ const ui = {
                 window.dashboardTrendChart = null;
             }
         }
+    },
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 };
 

@@ -43,7 +43,9 @@ const app = {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
                 const page = e.currentTarget.dataset.page;
-                if (page) ui.showPage(page);
+                if (page && typeof ui !== 'undefined') {
+                    ui.showPage(page);
+                }
             });
         });
 
@@ -83,12 +85,14 @@ const app = {
                 return false;
             }
             
-            const range = CONFIG.RANGES[param];
-            if (range) {
-                const isValid = numValue >= range.min && numValue <= range.max;
-                field.classList.toggle('is-valid', isValid);
-                field.classList.toggle('is-invalid', !isValid);
-                return isValid;
+            if (typeof CONFIG !== 'undefined' && CONFIG.RANGES) {
+                const range = CONFIG.RANGES[param];
+                if (range) {
+                    const isValid = numValue >= range.min && numValue <= range.max;
+                    field.classList.toggle('is-valid', isValid);
+                    field.classList.toggle('is-invalid', !isValid);
+                    return isValid;
+                }
             }
             
             field.classList.add('is-valid');
@@ -266,6 +270,7 @@ const app = {
     },
 
     getStatus(param, value) {
+        if (typeof CONFIG === 'undefined' || !CONFIG.RANGES) return 'normal';
         const range = CONFIG.RANGES[param];
         if (!range) return 'normal';
         return (value >= range.min && value <= range.max) ? 'normal' : 'alert';

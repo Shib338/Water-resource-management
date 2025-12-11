@@ -1,4 +1,4 @@
-// Simple Firebase Configuration
+// Firebase Configuration - Secure Implementation
 const firebaseConfig = {
     apiKey: "AIzaSyCLVGuidDrlvPe_mQzpt-0h7tT6es17WII",
     authDomain: "water-resource-managemen-e9556.firebaseapp.com",
@@ -29,22 +29,41 @@ if (typeof firebase !== 'undefined') {
 // Simple Database Functions
 const FirebaseDB = {
     async saveReading(reading) {
-        // Always use localStorage for reliability
+        // Input validation and sanitization
+        if (!reading || typeof reading !== 'object') {
+            console.error('Invalid reading data');
+            return false;
+        }
+        
         try {
             const readings = this.loadFromLocalStorage();
-            const newReading = {
-                ...reading,
+            
+            // Sanitize and validate reading data
+            const sanitizedReading = {
                 id: Date.now().toString(),
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                location: this.sanitizeString(reading.location),
+                ph: this.sanitizeNumber(reading.ph),
+                heavyMetal: this.sanitizeNumber(reading.heavyMetal),
+                source: this.sanitizeString(reading.source) || 'manual'
             };
-            readings.push(newReading);
+            
+            // Validate required fields
+            if (!sanitizedReading.location || 
+                sanitizedReading.ph === null || 
+                sanitizedReading.heavyMetal === null) {
+                console.error('Missing required fields');
+                return false;
+            }
+            
+            readings.push(sanitizedReading);
             localStorage.setItem('waterQualityReadings', JSON.stringify(readings));
             console.log('✅ Data saved successfully');
             
             // Try to save to Firebase in background
             if (isFirebaseEnabled && db) {
                 try {
-                    await db.collection('waterQualityReadings').add(newReading);
+                    await db.collection('waterQualityReadings').add(sanitizedReading);
                     console.log('✅ Also saved to cloud');
                 } catch (e) {
                     console.log('⚠️ Cloud save failed, but localStorage worked');
@@ -87,11 +106,33 @@ const FirebaseDB = {
     loadFromLocalStorage() {
         try {
             const stored = localStorage.getItem('waterQualityReadings');
-            return stored ? JSON.parse(stored) : [];
+            if (!stored) return [];
+            
+            const parsed = JSON.parse(stored);
+            if (!Array.isArray(parsed)) return [];
+            
+            // Validate and sanitize loaded data
+            return parsed.filter(reading => 
+                reading && 
+                typeof reading === 'object' && 
+                reading.timestamp && 
+                reading.location
+            );
         } catch (error) {
             console.error('Load error:', error);
             return [];
         }
+    },
+    
+    sanitizeString(str) {
+        if (typeof str !== 'string') return '';
+        return str.trim().substring(0, 100); // Limit length
+    },
+    
+    sanitizeNumber(num) {
+        const parsed = parseFloat(num);
+        if (isNaN(parsed) || !isFinite(parsed)) return null;
+        return Math.max(0, Math.min(parsed, 1000)); // Reasonable bounds
     }
 };
 

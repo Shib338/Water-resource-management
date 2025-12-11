@@ -15,12 +15,17 @@ const sensor = {
         const readBtn = document.getElementById('readBtn');
         const statusDiv = document.getElementById('sensorStatus');
 
-        connectBtn.onclick = async () => {
-            try {
-                if (!('serial' in navigator)) {
-                    alert('Web Serial API not supported. Use Chrome or Edge browser.');
-                    return;
-                }
+        if (connectBtn) {
+            connectBtn.onclick = async () => {
+                try {
+                    if (!('serial' in navigator)) {
+                        if (typeof ui !== 'undefined') {
+                            ui.showNotification('Web Serial API not supported. Use Chrome or Edge browser.', 'error');
+                        } else {
+                            alert('Web Serial API not supported. Use Chrome or Edge browser.');
+                        }
+                        return;
+                    }
 
                 this.port = await navigator.serial.requestPort();
                 await this.port.open({ 
@@ -52,7 +57,8 @@ const sensor = {
             }
         };
 
-        readBtn.onclick = async () => {
+        if (readBtn) {
+            readBtn.onclick = async () => {
             if (!this.isConnected) {
                 if (typeof ui !== 'undefined') {
                     ui.showNotification('Connect sensor first!', 'warning');
@@ -72,6 +78,7 @@ const sensor = {
                 readBtn.classList.add('btn-danger');
             }
         };
+        }
     },
 
 
@@ -188,7 +195,11 @@ const sensor = {
 
     parseData(line) {
         try {
-            if (line.length < 10) return null;
+            if (!line || typeof line !== 'string' || line.length < 10) return null;
+            
+            // Sanitize input
+            line = line.trim().substring(0, 200);
+            
             if (line.includes('===') || line.includes('Initializing') || line.includes('Ready')) return null;
             
             // Arduino format: "Voltage: 2.506 V | pH Value: 6.96 (Acidic)"
@@ -196,15 +207,15 @@ const sensor = {
             
             if (match) {
                 const ph = parseFloat(match[1]);
-                const status = match[2].trim();
+                const status = match[2].trim().substring(0, 20);
                 
                 if (isNaN(ph) || ph < 0 || ph > 14) return null;
                 
                 console.log('✅ pH:', ph, status);
                 return {
-                    ph: ph,
+                    ph: Math.round(ph * 100) / 100,
                     status: status,
-                    heavyMetal: Math.random() * 0.4 + 0.1 // Random value between 0.1-0.5 mg/L
+                    heavyMetal: Math.round((Math.random() * 0.4 + 0.1) * 1000) / 1000
                 };
             }
         } catch (error) {
@@ -214,8 +225,19 @@ const sensor = {
     },
 
     fillForm(data) {
-        document.getElementById('ph').value = data.ph.toFixed(2);
-        document.getElementById('heavyMetal').value = data.heavyMetal.toFixed(3);
+        if (!data || typeof data !== 'object') return;
+        
+        const phField = document.getElementById('ph');
+        const hmField = document.getElementById('heavyMetal');
+        
+        if (phField && typeof data.ph === 'number' && !isNaN(data.ph)) {
+            phField.value = data.ph.toFixed(2);
+        }
+        
+        if (hmField && typeof data.heavyMetal === 'number' && !isNaN(data.heavyMetal)) {
+            hmField.value = data.heavyMetal.toFixed(3);
+        }
+        
         console.log('✅ Form updated');
     },
 

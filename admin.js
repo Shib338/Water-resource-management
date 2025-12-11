@@ -11,6 +11,9 @@ const admin = {
     filteredData: [],
     ADMIN_USERNAME: 'admin',
     ADMIN_PASSWORD: 'WaterAdmin@2024',
+    MAX_LOGIN_ATTEMPTS: 3,
+    loginAttempts: 0,
+    lockoutTime: null,
 
     init() {
         console.log('🔒 Admin init - Starting logged OUT');
@@ -81,7 +84,24 @@ const admin = {
     async login(username, password) {
         console.log('🔑 Login attempt for:', username);
         
-        if (username === this.ADMIN_USERNAME && password === this.ADMIN_PASSWORD) {
+        // Check for lockout
+        if (this.lockoutTime && Date.now() < this.lockoutTime) {
+            const remainingTime = Math.ceil((this.lockoutTime - Date.now()) / 1000);
+            if (typeof ui !== 'undefined') {
+                ui.showNotification(`Account locked. Try again in ${remainingTime} seconds.`, 'error');
+            }
+            return;
+        }
+        
+        // Input validation
+        if (!username || !password || typeof username !== 'string' || typeof password !== 'string') {
+            this.handleFailedLogin();
+            return;
+        }
+        
+        if (username.trim() === this.ADMIN_USERNAME && password === this.ADMIN_PASSWORD) {
+            this.loginAttempts = 0;
+            this.lockoutTime = null;
             this.isLoggedIn = true;
             this.isAdminMode = true;
             
@@ -114,11 +134,25 @@ const admin = {
             }
             console.log('✅ Admin logged in');
         } else {
-            if (typeof ui !== 'undefined') {
-                ui.showNotification('❌ Invalid credentials!', 'error');
-            }
-            console.log('❌ Login failed');
+            this.handleFailedLogin();
         }
+    },
+    
+    handleFailedLogin() {
+        this.loginAttempts++;
+        
+        if (this.loginAttempts >= this.MAX_LOGIN_ATTEMPTS) {
+            this.lockoutTime = Date.now() + (5 * 60 * 1000); // 5 minute lockout
+            if (typeof ui !== 'undefined') {
+                ui.showNotification('❌ Too many failed attempts. Account locked for 5 minutes.', 'error');
+            }
+        } else {
+            const remaining = this.MAX_LOGIN_ATTEMPTS - this.loginAttempts;
+            if (typeof ui !== 'undefined') {
+                ui.showNotification(`❌ Invalid credentials! ${remaining} attempts remaining.`, 'error');
+            }
+        }
+        console.log('❌ Login failed');
     },
 
     logout() {
@@ -126,6 +160,8 @@ const admin = {
         
         this.isLoggedIn = false;
         this.isAdminMode = false;
+        this.loginAttempts = 0;
+        this.lockoutTime = null;
         
         // Hide admin elements
         document.querySelectorAll('.admin-only').forEach(el => {

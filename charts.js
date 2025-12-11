@@ -8,32 +8,46 @@ const charts = {
     allCharts: {},
 
     updateCharts(readings) {
-        if (!readings || readings.length === 0) {
+        if (!readings || !Array.isArray(readings) || readings.length === 0) {
             console.log('Clearing all charts');
             this.clearAllCharts();
             return;
         }
+        
+        // Validate and sanitize readings data
+        const validReadings = readings.filter(reading => 
+            reading && 
+            typeof reading === 'object' && 
+            typeof reading.ph === 'number' && 
+            typeof reading.heavyMetal === 'number' &&
+            reading.timestamp
+        );
+        
+        if (validReadings.length === 0) {
+            this.clearAllCharts();
+            return;
+        }
 
-        console.log('Updating charts with', readings.length, 'readings');
+        console.log('Updating charts with', validReadings.length, 'valid readings');
         
         // Update statistical summary
-        this.updateStatisticalSummary(readings);
+        this.updateStatisticalSummary(validReadings);
         
         // Update 2 parameter charts
-        this.updateParameterChart('phChart', readings, 'ph', 'pH Level');
-        this.updateParameterChart('heavyMetalChart', readings, 'heavyMetal', 'Heavy Metal (mg/L)');
+        this.updateParameterChart('phChart', validReadings, 'ph', 'pH Level');
+        this.updateParameterChart('heavyMetalChart', validReadings, 'heavyMetal', 'Heavy Metal (mg/L)');
         
         // Update gauges
-        this.updateGauges(readings);
+        this.updateGauges(validReadings);
         
         // Update quality assessment
-        this.updateQualityAssessment(readings);
+        this.updateQualityAssessment(validReadings);
         
         // Update improvement solutions
-        this.updateImprovementSolutions(readings);
+        this.updateImprovementSolutions(validReadings);
         
         // Update correlations
-        this.updateCorrelations(readings);
+        this.updateCorrelations(validReadings);
     },
 
     clearAllCharts() {
@@ -193,6 +207,11 @@ const charts = {
             console.warn(`Canvas not found: ${canvasId}`);
             return;
         }
+        
+        if (typeof Chart === 'undefined') {
+            console.warn('Chart.js not loaded');
+            return;
+        }
 
         try {
             const ctx = canvas.getContext('2d');
@@ -202,8 +221,17 @@ const charts = {
                 this.allCharts[canvasId].destroy();
             }
 
-            const labels = readings.map(r => new Date(r.timestamp).toLocaleTimeString());
-            const data = readings.map(r => r[parameter] || 0);
+            const labels = readings.map(r => {
+                try {
+                    return new Date(r.timestamp).toLocaleTimeString();
+                } catch (e) {
+                    return 'Invalid Date';
+                }
+            });
+            const data = readings.map(r => {
+                const value = r[parameter];
+                return (typeof value === 'number' && !isNaN(value)) ? value : 0;
+            });
 
             this.allCharts[canvasId] = new Chart(ctx, {
                 type: 'line',
