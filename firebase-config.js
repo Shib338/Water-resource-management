@@ -1,4 +1,4 @@
-// Firebase Configuration - Secure Implementation
+// Firebase Configuration
 const firebaseConfig = {
     apiKey: "AIzaSyCLVGuidDrlvPe_mQzpt-0h7tT6es17WII",
     authDomain: "water-resource-managemen-e9556.firebaseapp.com",
@@ -17,61 +17,42 @@ if (typeof firebase !== 'undefined') {
         firebase.initializeApp(firebaseConfig);
         db = firebase.firestore();
         isFirebaseEnabled = true;
-        console.log('✅ Firebase initialized successfully');
     } catch (error) {
-        console.error('Firebase error:', error);
-        console.log('⚠️ Using localStorage fallback');
+        // Firebase failed, use localStorage
     }
-} else {
-    console.log('⚠️ Firebase SDK not loaded - Using localStorage');
 }
 
-// Simple Database Functions
+// Database Functions
 const FirebaseDB = {
     async saveReading(reading) {
-        // Input validation and sanitization
-        if (!reading || typeof reading !== 'object') {
-            console.error('Invalid reading data');
-            return false;
-        }
+        if (!reading) return false;
         
         try {
+            // Always save to localStorage
             const readings = this.loadFromLocalStorage();
-            
-            // Sanitize and validate reading data
             const sanitizedReading = {
                 id: Date.now().toString(),
                 timestamp: new Date().toISOString(),
-                location: this.sanitizeString(reading.location),
-                ph: this.sanitizeNumber(reading.ph),
-                heavyMetal: this.sanitizeNumber(reading.heavyMetal),
-                source: this.sanitizeString(reading.source) || 'manual'
+                location: reading.location?.trim() || '',
+                ph: parseFloat(reading.ph) || 0,
+                heavyMetal: parseFloat(reading.heavyMetal) || 0,
+                source: 'manual'
             };
-            
-            // Validate required fields
-            if (!sanitizedReading.location || 
-                sanitizedReading.ph === null || 
-                sanitizedReading.heavyMetal === null) {
-                console.error('Missing required fields');
-                return false;
-            }
             
             readings.push(sanitizedReading);
             localStorage.setItem('waterQualityReadings', JSON.stringify(readings));
-            console.log('✅ Data saved successfully');
             
-            // Try to save to Firebase in background
+            // Try Firebase
             if (isFirebaseEnabled && db) {
                 try {
                     await db.collection('waterQualityReadings').add(sanitizedReading);
-                    console.log('✅ Also saved to cloud');
                 } catch (e) {
-                    console.log('⚠️ Cloud save failed, but localStorage worked');
+                    // Firebase failed but localStorage worked
                 }
             }
+            
             return true;
         } catch (error) {
-            console.error('Save error:', error);
             return false;
         }
     },
@@ -80,25 +61,11 @@ const FirebaseDB = {
         return this.loadFromLocalStorage();
     },
 
-    async deleteReading(id) {
-        try {
-            const readings = this.loadFromLocalStorage();
-            const filtered = readings.filter(r => r.id !== id);
-            localStorage.setItem('waterQualityReadings', JSON.stringify(filtered));
-            return true;
-        } catch (error) {
-            console.error('Delete error:', error);
-            return false;
-        }
-    },
-
     async clearAllData() {
         try {
             localStorage.removeItem('waterQualityReadings');
-            console.log('✅ All data cleared');
             return true;
         } catch (error) {
-            console.error('Clear error:', error);
             return false;
         }
     },
@@ -109,30 +76,10 @@ const FirebaseDB = {
             if (!stored) return [];
             
             const parsed = JSON.parse(stored);
-            if (!Array.isArray(parsed)) return [];
-            
-            // Validate and sanitize loaded data
-            return parsed.filter(reading => 
-                reading && 
-                typeof reading === 'object' && 
-                reading.timestamp && 
-                reading.location
-            );
+            return Array.isArray(parsed) ? parsed : [];
         } catch (error) {
-            console.error('Load error:', error);
             return [];
         }
-    },
-    
-    sanitizeString(str) {
-        if (typeof str !== 'string') return '';
-        return str.trim().substring(0, 100); // Limit length
-    },
-    
-    sanitizeNumber(num) {
-        const parsed = parseFloat(num);
-        if (isNaN(parsed) || !isFinite(parsed)) return null;
-        return parsed; // Keep original value
     }
 };
 

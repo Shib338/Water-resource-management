@@ -179,7 +179,7 @@
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold">Heavy Metal (PPM) <span class="text-danger">*</span></label>
-                                        <input type="number" class="form-control form-control-lg shadow-sm" id="heavyMetal" step="1" min="0" max="10000" placeholder="50 - 300 PPM" required>
+                                        <input type="number" class="form-control form-control-lg shadow-sm" id="heavyMetal" step="1" min="0" max="10000" placeholder="100 - 300 PPM" required>
                                         <div class="form-text">Heavy Metal concentration in Parts Per Million (PPM)</div>
                                     </div>
                                 </div>
@@ -202,17 +202,11 @@
                     <h4 class="mb-0"><i class="bi bi-file-earmark-text"></i> Water Quality Reports</h4>
                     <div class="admin-only" style="display: none;">
                         <div class="btn-group" role="group">
-                            <button class="btn btn-success shadow-sm" onclick="dataManager.exportData('json')">
-                                <i class="bi bi-download"></i> Export JSON
+                            <button class="btn btn-success shadow-sm" onclick="app.exportData()">
+                                <i class="bi bi-download"></i> Export Data
                             </button>
-                            <button class="btn btn-outline-success shadow-sm" onclick="dataManager.exportData('csv')">
-                                <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
-                            </button>
-                            <button class="btn btn-outline-primary shadow-sm" onclick="dataManager.importData()">
-                                <i class="bi bi-upload"></i> Import
-                            </button>
-                            <button class="btn btn-outline-warning shadow-sm" onclick="dataManager.createBackup()">
-                                <i class="bi bi-shield-check"></i> Backup
+                            <button class="btn btn-outline-primary shadow-sm" onclick="app.enablePrivacyMode()">
+                                <i class="bi bi-shield-check"></i> Privacy Mode
                             </button>
                         </div>
                     </div>
@@ -409,16 +403,12 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     
-    <script src="config.js?v=20250122b"></script>
-    <script src="firebase-config.js?v=20250122b"></script>
-    <script src="validation.js?v=20250122b"></script>
-    <script src="notifications.js?v=20250122b"></script>
-    <script src="data-manager.js?v=20250122b"></script>
-    <script src="simple-sensor.js?v=20250122b"></script>
-    <script src="ui.js?v=20250122b"></script>
-    <script src="charts.js?v=20250122b"></script>
-    <script src="app.js?v=20250122b"></script>
-
-    <script src="admin.js?v=20250122b"></script>
+    <script src="config.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="simple-sensor.js"></script>
+    <script src="ui.js"></script>
+    <script src="charts.js"></script>
+    <script src="app.js"></script>
+    <script src="admin.js"></script>
 </body>
 </html>

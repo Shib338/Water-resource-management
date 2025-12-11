@@ -1,58 +1,22 @@
 /**
- * Water Quality Management System - Firebase Cloud Storage
- * @global
+ * Water Quality Management System - Simple Working Version
  */
 
-/* global CONFIG, ui, charts, sensor, admin, FirebaseDB */
 const app = {
     readings: [],
-    isLoading: false,
 
     init() {
-        try {
-            this.readings = [];
-            this.setupEventListeners();
-            this.validateBrowser();
-            
-
-            
-            // Load existing data on startup
-            this.loadData();
-            
-            if (typeof ui !== 'undefined') {
-                ui.showPage('dashboard');
-            }
-            // Initialize sensor system
-            if (typeof sensor !== 'undefined' && sensor.init) {
-                console.log('🔧 Starting sensor initialization...');
-                sensor.init();
-            } else {
-                console.error('❌ Sensor system not found!');
-            }
-            
-
-        } catch (error) {
-            console.error('App initialization error:', error);
+        this.setupEventListeners();
+        this.loadData();
+        if (typeof ui !== 'undefined') {
+            ui.showPage('dashboard');
         }
-    },
-    
-
-
-    validateBrowser() {
-        // USB sensor support check handled silently
+        if (typeof sensor !== 'undefined' && sensor.init) {
+            sensor.init();
+        }
     },
 
     setupEventListeners() {
-        document.querySelectorAll('.nav-link').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const page = e.currentTarget.dataset.page;
-                if (page && typeof ui !== 'undefined') {
-                    ui.showPage(page);
-                }
-            });
-        });
-
         const form = document.getElementById('readingForm');
         if (form) {
             form.addEventListener('submit', (e) => {
@@ -60,303 +24,164 @@ const app = {
                 this.validateAndSaveReading();
             });
         }
-
-        this.setupFieldValidation();
-    },
-
-    setupFieldValidation() {
-        const fields = ['ph', 'heavyMetal'];
-        
-        fields.forEach(fieldId => {
-            const field = document.getElementById(fieldId);
-            if (field) {
-                field.addEventListener('input', () => this.validateField(fieldId, field.value));
-                field.addEventListener('blur', () => this.validateField(fieldId, field.value));
-            }
-        });
-    },
-
-    validateField(param, value) {
-        try {
-            const field = document.getElementById(param);
-            if (!field) return false;
-
-            const numValue = parseFloat(value);
-            field.classList.remove('is-valid', 'is-invalid');
-            
-            if (value === '' || isNaN(numValue) || numValue < 0) {
-                if (value !== '') field.classList.add('is-invalid');
-                return false;
-            }
-            
-            if (typeof CONFIG !== 'undefined' && CONFIG.RANGES) {
-                const range = CONFIG.RANGES[param];
-                if (range) {
-                    const isValid = numValue >= range.absoluteMin && numValue <= range.absoluteMax;
-                    field.classList.toggle('is-valid', isValid);
-                    field.classList.toggle('is-invalid', !isValid);
-                    return isValid;
-                }
-            }
-            
-            field.classList.add('is-valid');
-            return true;
-        } catch (error) {
-            return false;
-        }
     },
 
     validateAndSaveReading() {
-        try {
-            const locationElement = document.getElementById('location');
-            if (!locationElement) {
-                if (typeof ui !== 'undefined') {
-                    ui.showNotification('Form error: Location field not found', 'error');
-                }
-                return;
-            }
-            
-            const location = locationElement.value.trim();
-            
-            if (!location) {
-                if (typeof ui !== 'undefined') {
-                    ui.showNotification('Location is required', 'error');
-                }
-                locationElement.focus();
-                return;
-            }
+        const location = document.getElementById('location').value.trim();
+        const ph = parseFloat(document.getElementById('ph').value);
+        const heavyMetal = parseFloat(document.getElementById('heavyMetal').value);
 
-            const fields = ['ph', 'heavyMetal'];
-            const values = {};
-            let hasErrors = false;
-
-            for (const field of fields) {
-                const element = document.getElementById(field);
-                if (!element) {
-                    if (typeof ui !== 'undefined') {
-                        ui.showNotification(`Form error: ${field} field not found`, 'error');
-                    }
-                    return;
-                }
-                
-                const value = parseFloat(element.value);
-                
-                if (isNaN(value) || value < 0) {
-                    if (typeof ui !== 'undefined') {
-                        ui.showNotification(`Invalid ${field} value. Please enter a positive number.`, 'error');
-                    }
-                    element.focus();
-                    return;
-                }
-                
-                values[field] = value;
-                
-                if (!this.validateField(field, value)) {
-                    hasErrors = true;
-                }
-            }
-
-            if (hasErrors) {
-                if (typeof ui !== 'undefined') {
-                    ui.showNotification('Some values are outside normal ranges. Data saved with warnings.', 'warning');
-                }
-            }
-
-            this.addReading(location, values);
-        } catch (error) {
+        if (!location || isNaN(ph) || isNaN(heavyMetal)) {
             if (typeof ui !== 'undefined') {
-                ui.showNotification('Error validating form data. Please try again.', 'error');
+                ui.showNotification('Please fill all fields correctly', 'error');
             }
+            return;
+        }
+
+        this.addReading(location, { ph, heavyMetal });
+    },
+
+    async addReading(location, values) {
+        const reading = {
+            id: Date.now(),
+            timestamp: new Date().toISOString(),
+            location: location,
+            ph: values.ph,
+            heavyMetal: values.heavyMetal,
+            source: 'manual'
+        };
+
+        // Save to session storage for immediate display
+        const sessionData = sessionStorage.getItem('userSessionReadings');
+        const sessionReadings = sessionData ? JSON.parse(sessionData) : [];
+        sessionReadings.push(reading);
+        sessionStorage.setItem('userSessionReadings', JSON.stringify(sessionReadings));
+
+        // Save to Firebase
+        if (typeof FirebaseDB !== 'undefined') {
+            await FirebaseDB.saveReading(reading);
+        }
+
+        // Update display
+        this.readings = [...sessionReadings];
+        this.updateUI();
+
+        // Reset form
+        document.getElementById('readingForm').reset();
+        
+        if (typeof ui !== 'undefined') {
+            ui.showNotification('✅ Data saved successfully', 'success');
+            ui.showPage('dashboard');
         }
     },
 
-    async loadData() {
-        try {
-            // Check if admin is logged in to determine data visibility
-            const isAdmin = typeof admin !== 'undefined' && admin.isLoggedIn;
-            
-            if (isAdmin) {
-                // Admin can see all data
-                this.readings = (typeof FirebaseDB !== 'undefined') ? await FirebaseDB.loadReadings() : [];
-                
-                // Filter out any test data and only keep real user entries
-                this.readings = this.readings
-                    .filter(reading => {
-                        return reading && typeof reading === 'object' && reading.timestamp && 
-                               reading.source !== 'test'; // Exclude any test data
-                    })
-                    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-                
-                console.log('📊 Admin loaded', this.readings.length, 'real data readings');
-            } else {
-                // Regular users see no historical data
-                this.readings = [];
-                console.log('📊 Regular user - no historical data loaded');
-            }
-            
-            const totalEl = document.getElementById('totalReadings');
-            if (totalEl) totalEl.textContent = this.readings.length;
-            
-            if (typeof ui !== 'undefined') {
-                ui.updateDashboard(this.readings);
-            }
-            this.updateReports();
-            if (typeof charts !== 'undefined' && charts.updateCharts) {
-                charts.updateCharts(this.readings);
-            }
-            
-            // Update admin stats if logged in
-            if (typeof admin !== 'undefined' && admin.isLoggedIn) {
-                admin.updateAdminStats();
-            }
+    loadData() {
+        const isAdmin = typeof admin !== 'undefined' && admin.isLoggedIn;
+        
+        if (isAdmin) {
+            // Admin sees all Firebase data
+            this.loadFirebaseData();
+        } else {
+            // Regular user sees session data
+            const sessionData = sessionStorage.getItem('userSessionReadings');
+            this.readings = sessionData ? JSON.parse(sessionData) : [];
+            this.updateUI();
+        }
+    },
 
-        } catch (error) {
-            console.error('Load data error:', error);
-            this.readings = [];
-            if (typeof ui !== 'undefined') {
-                ui.updateDashboard([]);
-            }
+    async loadFirebaseData() {
+        if (typeof FirebaseDB !== 'undefined') {
+            this.readings = await FirebaseDB.loadReadings();
+            this.updateUI();
+        }
+    },
+
+    updateUI() {
+        const totalEl = document.getElementById('totalReadings');
+        if (totalEl) totalEl.textContent = this.readings.length;
+
+        if (typeof ui !== 'undefined') {
+            ui.updateDashboard(this.readings);
+        }
+        this.updateReports();
+        if (typeof charts !== 'undefined') {
+            charts.updateCharts(this.readings);
         }
     },
 
     resetDisplay() {
-        try {
-            // Check if admin is logged in
-            if (typeof admin !== 'undefined' && admin.isLoggedIn) {
-                // Admin can see all data - reload from database
-                this.loadData();
-                // Update admin statistics
-                if (typeof admin !== 'undefined' && admin.updateAdminStats) {
-                    admin.updateAdminStats();
-                }
-                if (typeof ui !== 'undefined') {
-                    ui.showNotification('Admin view: All data refreshed', 'success');
-                }
-            } else {
-                // Regular users see empty display for privacy
-                this.readings = [];
-                const totalEl = document.getElementById('totalReadings');
-                if (totalEl) totalEl.textContent = '0';
-                if (typeof ui !== 'undefined') {
-                    ui.updateDashboard([]);
-                    ui.showPage('dashboard');
-                    ui.showNotification('Display cleared for privacy', 'success');
-                }
-                this.updateReports();
-                if (typeof charts !== 'undefined' && charts.updateCharts) {
-                    charts.updateCharts([]);
-                }
-                // Clear dashboard display completely
-                const latestDetails = document.getElementById('latestDetails');
-                if (latestDetails) {
-                    latestDetails.innerHTML = `
-                        <div class="text-center py-5">
-                            <i class="bi bi-info-circle fs-1 text-muted mb-3"></i>
-                            <h5 class="text-muted">No readings available</h5>
-                            <p class="text-muted">Add data to begin monitoring water quality parameters.</p>
+        const isAdmin = typeof admin !== 'undefined' && admin.isLoggedIn;
+        
+        if (isAdmin) {
+            this.loadData();
+            if (typeof ui !== 'undefined') {
+                ui.showNotification('Admin data refreshed', 'success');
+            }
+        } else {
+            sessionStorage.removeItem('userSessionReadings');
+            this.readings = [];
+            this.updateUI();
+            if (typeof ui !== 'undefined') {
+                ui.showNotification('Session data cleared', 'success');
+            }
+        }
+    },
+
+    updateReports() {
+        const outputList = document.getElementById('outputList');
+        if (!outputList) return;
+
+        if (this.readings.length === 0) {
+            outputList.innerHTML = '<div class="alert alert-info">No readings available. Add data to see reports.</div>';
+            return;
+        }
+
+        let html = `<div class="alert alert-success mb-4"><strong>Total Readings:</strong> ${this.readings.length}</div>`;
+        html += '<div class="row g-3">';
+        
+        this.readings.slice().reverse().forEach(reading => {
+            html += `
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="card-title">${reading.location}</h6>
+                            <p class="text-muted small">${new Date(reading.timestamp).toLocaleString()}</p>
+                            <div class="row">
+                                <div class="col-6"><small>pH: ${reading.ph?.toFixed(2)}</small></div>
+                                <div class="col-6"><small>Heavy Metal: ${reading.heavyMetal?.toFixed(0)} PPM</small></div>
+                            </div>
                         </div>
-                    `;
-                }
-                // Clear admin statistics for regular users
-                const totalEl = document.getElementById('totalRecords');
-                const normalEl = document.getElementById('normalRecords');
-                const alertEl = document.getElementById('alertRecords');
-                if (totalEl) totalEl.textContent = '0';
-                if (normalEl) normalEl.textContent = '0';
-                if (alertEl) alertEl.textContent = '0';
-            }
-        } catch (error) {
-            if (typeof ui !== 'undefined') {
-                ui.showNotification('Error refreshing display', 'error');
-            }
-        }
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        outputList.innerHTML = html;
     },
 
-
-
-    async addReading(location, values) {
-        try {
-            const reading = {
-                id: Date.now(),
-                timestamp: new Date().toISOString(),
-                date: new Date().toLocaleDateString(),
-                time: new Date().toLocaleTimeString(),
-                location: location.trim(),
-                ...values,
-                source: 'manual'
-            };
-
-            const saved = (typeof FirebaseDB !== 'undefined') ? await FirebaseDB.saveReading(reading) : false;
-            
-            if (saved) {
-                // Load all readings from storage to get complete dataset
-                await this.loadData();
-                
-                if (typeof ui !== 'undefined') {
-                    ui.updateDashboard(this.readings);
-                }
-                this.updateReports();
-                if (typeof charts !== 'undefined' && charts.updateCharts) {
-                    charts.updateCharts(this.readings);
-                }
-                
-                const form = document.getElementById('readingForm');
-                if (form) form.reset();
-                
-                document.querySelectorAll('.is-valid, .is-invalid').forEach(el => {
-                    el.classList.remove('is-valid', 'is-invalid');
-                });
-                
-                if (typeof ui !== 'undefined') {
-                    ui.showNotification('✅ Water quality reading saved to cloud database', 'success');
-                }
-            } else {
-                if (typeof ui !== 'undefined') {
-                    ui.showNotification('Error saving reading. Please try again.', 'error');
-                }
-            }
-        } catch (error) {
-            if (typeof ui !== 'undefined') {
-                ui.showNotification('Error saving reading. Please try again.', 'error');
-            }
+    updateAnalytics() {
+        if (typeof charts !== 'undefined') {
+            charts.updateCharts(this.readings);
         }
-    },
-
-    getStatus(param, value) {
-        if (typeof CONFIG === 'undefined' || !CONFIG.RANGES) return 'normal';
-        const range = CONFIG.RANGES[param];
-        if (!range) return 'normal';
-        return (value >= range.min && value <= range.max) ? 'normal' : 'alert';
     },
 
     exportData() {
-        // Check if admin is logged in
         if (typeof admin === 'undefined' || !admin.isLoggedIn) {
             if (typeof ui !== 'undefined') {
-                ui.showNotification('Admin login required to export data!', 'error');
+                ui.showNotification('Admin login required', 'error');
             }
             return;
         }
 
         if (this.readings.length === 0) {
             if (typeof ui !== 'undefined') {
-                ui.showNotification('No data available to export', 'warning');
+                ui.showNotification('No data to export', 'warning');
             }
             return;
         }
 
-        const validReadings = this.readings.filter(reading => {
-            return reading && typeof reading === 'object' && reading.timestamp;
-        });
-
-        if (validReadings.length === 0) {
-            if (typeof ui !== 'undefined') {
-                ui.showNotification('No valid data to export', 'error');
-            }
-            return;
-        }
-
-        const dataStr = JSON.stringify(validReadings, null, 2);
+        const dataStr = JSON.stringify(this.readings, null, 2);
         const dataBlob = new Blob([dataStr], { type: 'application/json' });
         const url = URL.createObjectURL(dataBlob);
         
@@ -371,118 +196,32 @@ const app = {
         URL.revokeObjectURL(url);
         
         if (typeof ui !== 'undefined') {
-            ui.showNotification(`Exported ${validReadings.length} readings successfully`, 'success');
+            ui.showNotification(`Exported ${this.readings.length} readings`, 'success');
         }
     },
 
     async clearAllData() {
-        // Check if admin is logged in
         if (typeof admin === 'undefined' || !admin.isLoggedIn) {
             if (typeof ui !== 'undefined') {
-                ui.showNotification('Admin login required to delete data!', 'error');
+                ui.showNotification('Admin login required', 'error');
             }
             return;
         }
 
-        const totalInCloud = (typeof FirebaseDB !== 'undefined') ? (await FirebaseDB.loadReadings()).length : 0;
-        
-        if (totalInCloud === 0) {
+        const confirmed = confirm('Delete all data permanently?');
+        if (confirmed && typeof FirebaseDB !== 'undefined') {
+            await FirebaseDB.clearAllData();
+            this.readings = [];
+            this.updateUI();
             if (typeof ui !== 'undefined') {
-                ui.showNotification('No data in cloud database to delete', 'info');
-            }
-            return;
-        }
-        
-        const confirmed = confirm(`⚠️ WARNING: Delete all ${totalInCloud} readings from Firebase cloud database?\n\nThis will PERMANENTLY delete all data and cannot be undone!`);
-        
-        if (confirmed) {
-            const cleared = (typeof FirebaseDB !== 'undefined') ? await FirebaseDB.clearAllData() : false;
-            if (cleared) {
-                this.readings = [];
-                
-
-                
-                const totalEl = document.getElementById('totalReadings');
-                if (totalEl) totalEl.textContent = '0';
-                if (typeof ui !== 'undefined') {
-                    ui.updateDashboard([]);
-                }
-                this.updateReports();
-                if (typeof charts !== 'undefined' && charts.updateCharts) {
-                    charts.updateCharts([]);
-                }
-                if (typeof ui !== 'undefined') {
-                    ui.showNotification('🗑️ All data permanently deleted', 'info');
-                }
-            } else {
-                if (typeof ui !== 'undefined') {
-                    ui.showNotification('Error deleting data from Firebase', 'error');
-                }
+                ui.showNotification('All data deleted', 'info');
             }
         }
-    },
-    
-
-
-    getStats() {
-        return {
-            totalReadings: this.readings.length,
-            normalReadings: this.readings.filter(r => this.getStatus('ph', r.ph) === 'normal').length,
-            alertReadings: this.readings.filter(r => this.getStatus('ph', r.ph) === 'alert').length,
-            lastReading: this.readings[this.readings.length - 1],
-            dataSize: JSON.stringify(this.readings).length
-        };
     },
 
     showPage(pageId) {
         if (typeof ui !== 'undefined') {
             ui.showPage(pageId);
-        }
-    },
-
-    updateReports() {
-        const outputList = document.getElementById('outputList');
-        if (outputList) {
-            // Check if admin is logged in to show all data
-            const isAdmin = typeof admin !== 'undefined' && admin.isLoggedIn;
-            const displayReadings = isAdmin ? this.readings : [];
-            
-            if (displayReadings.length === 0) {
-                const message = isAdmin ? 
-                    'No readings available. Add data to see reports.' : 
-                    'Login as admin to view all historical data.';
-                outputList.innerHTML = `<div class="alert alert-info"><i class="bi bi-info-circle"></i> ${message}</div>`;
-            } else {
-                let html = `<div class="alert alert-success mb-4"><strong>Total Readings:</strong> ${displayReadings.length}</div>`;
-                html += '<div class="row g-3">';
-                displayReadings.slice().reverse().forEach(reading => {
-                    html += `
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h6 class="card-title">${reading.location}</h6>
-                                    <p class="text-muted small">${new Date(reading.timestamp).toLocaleString()}</p>
-                                    <div class="row">
-                                        <div class="col-6"><small>pH: ${reading.ph?.toFixed(2)}</small></div>
-                                        <div class="col-6"><small>Heavy Metal: ${reading.heavyMetal?.toFixed(0)} PPM</small></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-                html += '</div>';
-                outputList.innerHTML = html;
-            }
-        }
-    },
-
-    updateAnalytics() {
-        if (typeof charts !== 'undefined' && charts.updateCharts) {
-            // Only show analytics data to admins
-            const isAdmin = typeof admin !== 'undefined' && admin.isLoggedIn;
-            const displayReadings = isAdmin ? this.readings : [];
-            charts.updateCharts(displayReadings);
         }
     }
 };

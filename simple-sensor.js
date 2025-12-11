@@ -11,7 +11,6 @@ const sensor = {
     isReading: false,
 
     init() {
-        console.log('🔧 Initializing sensor system...');
         // Wait for DOM to be fully loaded
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => this.setupButtons());
@@ -21,24 +20,14 @@ const sensor = {
     },
 
     setupButtons() {
-        console.log('🔧 Setting up sensor buttons...');
-        
         const connectBtn = document.getElementById('connectBtn');
         const disconnectBtn = document.getElementById('disconnectBtn');
         const readBtn = document.getElementById('readBtn');
         const liveBtn = document.getElementById('liveBtn');
         const statusDiv = document.getElementById('sensorStatus');
-        
-        console.log('Button check:', {
-            connect: !!connectBtn,
-            disconnect: !!disconnectBtn, 
-            read: !!readBtn,
-            live: !!liveBtn
-        });
 
         if (connectBtn) {
             connectBtn.onclick = async () => {
-                console.log('🔌 Connect button clicked!');
                 try {
                     if (!('serial' in navigator)) {
                         const msg = 'Web Serial API not supported. Use Chrome or Edge browser.';
@@ -68,7 +57,6 @@ const sensor = {
                     if (statusDiv) statusDiv.innerHTML = '<i class="bi bi-check-circle text-success"></i> Connected! Click Read Data';
                     
                 } catch (error) {
-                    console.error('❌ Connection error:', error);
                     const errorMsg = error.message || 'Connection failed';
                     if (statusDiv) statusDiv.innerHTML = '<i class="bi bi-x-circle text-danger"></i> Failed: ' + errorMsg;
                     
@@ -88,7 +76,6 @@ const sensor = {
 
         if (disconnectBtn) {
             disconnectBtn.onclick = async () => {
-                console.log('🔌 Disconnect button clicked!');
                 try {
                     this.stopReading();
                     this.releaseReader();
@@ -114,24 +101,15 @@ const sensor = {
                     if (statusDiv) statusDiv.innerHTML = '<i class="bi bi-usb text-muted"></i> Disconnected';
                     
                 } catch (error) {
-                    console.error('❌ Disconnect error:', error);
                     if (statusDiv) statusDiv.innerHTML = '<i class="bi bi-x-circle text-danger"></i> Disconnect failed: ' + error.message;
                 }
             };
-        } else {
-            console.error('❌ Connect button not found!');
-        }
 
-        if (disconnectBtn) {
-            // Disconnect button setup already exists above
-        } else {
-            console.error('❌ Disconnect button not found!');
-        }
+
+
 
         if (readBtn) {
             readBtn.onclick = async () => {
-                console.log('📊 Read button clicked!');
-                
                 if (!this.isConnected || !this.port) {
                     const msg = 'Connect sensor first!';
                     alert(msg);
@@ -151,16 +129,11 @@ const sensor = {
                     readBtn.classList.add('btn-danger');
                 }
             };
-        } else {
-            console.error('❌ Read button not found!');
-        }
+
         
         // Retry if buttons missing
         if (!connectBtn || !readBtn || !disconnectBtn || !liveBtn) {
-            console.log('🔄 Some buttons missing, retrying in 1 second...');
             setTimeout(() => this.setupButtons(), 1000);
-        } else {
-            console.log('✅ All buttons found and setup complete!');
         }
     },
 
@@ -220,7 +193,7 @@ const sensor = {
                     line = line.trim();
                     if (line.length < 3) continue;
                     
-                    console.log('RAW SENSOR:', line);
+
                     
                     // pH Value: 7.2
                     const phMatch = line.match(/pH\s+Value:\s*([\d.]+)/i);
@@ -293,7 +266,6 @@ const sensor = {
             }
             
         } catch (error) {
-            console.error('Read error:', error);
             if (statusDiv) statusDiv.innerHTML = '<i class="bi bi-x-circle text-danger"></i> Error: ' + error.message;
             this.releaseReader();
         }
@@ -311,7 +283,7 @@ const sensor = {
             try {
                 this.reader.releaseLock();
             } catch (e) {
-                console.log('Reader release:', e.message);
+                // Reader release handled silently
             } finally {
                 this.reader = null;
             }
@@ -332,7 +304,7 @@ const sensor = {
             hmField.value = data.heavyMetal.toFixed(1);
         }
         
-        console.log('✅ Form updated:', data);
+
     },
 
     testFill() {
@@ -418,11 +390,7 @@ const sensor = {
                     listDiv.scrollTop = listDiv.scrollHeight;
                 }
                 
-                console.log('Raw data chunk:', {
-                    text: text,
-                    escaped: text.replace(/\r/g, '\\r').replace(/\n/g, '\\n'),
-                    bytes: Array.from(value)
-                });
+
             }
             
             reader.releaseLock();
@@ -432,7 +400,6 @@ const sensor = {
             }
             
         } catch (error) {
-            console.error('Monitor error:', error);
             if (statusDiv) {
                 statusDiv.innerHTML = `<i class="bi bi-x-circle text-danger"></i> Monitor error: ${error.message}`;
             }
@@ -484,7 +451,7 @@ const sensor = {
                         listDiv.scrollTop = listDiv.scrollHeight;
                     }
                     
-                    console.log(`LIVE #${readingCount}:`, line);
+
                     
                     if (readingCount >= 50) break;
                 }
@@ -497,7 +464,6 @@ const sensor = {
             }
             
         } catch (error) {
-            console.error('Live monitor error:', error);
             if (statusDiv) {
                 statusDiv.innerHTML = `<i class="bi bi-x-circle text-danger"></i> Monitor error: ${error.message}`;
             }

@@ -14,8 +14,8 @@ const ui = {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
                 const page = e.currentTarget.dataset.page;
-                if (page && typeof app !== 'undefined') {
-                    app.showPage(page);
+                if (page) {
+                    this.showPage(page);
                 }
             });
         });
@@ -23,18 +23,25 @@ const ui = {
 
     showPage(pageId) {
         try {
+            // Hide all pages
             document.querySelectorAll('.page-content').forEach(page => {
                 page.classList.remove('active');
             });
 
+            // Show target page
             const targetPage = document.getElementById(`${pageId}-page`);
             if (targetPage) {
                 targetPage.classList.add('active');
             } else {
-                console.warn(`Page not found: ${pageId}-page`);
+                // Fallback to dashboard if page not found
+                const dashboardPage = document.getElementById('dashboard-page');
+                if (dashboardPage) {
+                    dashboardPage.classList.add('active');
+                }
                 return;
             }
 
+            // Update navigation
             document.querySelectorAll('.nav-link').forEach(link => {
                 link.classList.remove('active');
             });
@@ -44,10 +51,15 @@ const ui = {
                 activeLink.classList.add('active');
             }
 
+            // Update page content
             if (pageId === 'output' && typeof app !== 'undefined') app.updateReports();
             if (pageId === 'analytics' && typeof app !== 'undefined') app.updateAnalytics();
         } catch (error) {
-            console.error('Show page error:', error);
+            // Show dashboard as fallback
+            const dashboardPage = document.getElementById('dashboard-page');
+            if (dashboardPage) {
+                dashboardPage.classList.add('active');
+            }
         }
     },
 

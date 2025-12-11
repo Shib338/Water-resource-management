@@ -16,7 +16,6 @@ const admin = {
     lockoutTime: null,
 
     init() {
-        console.log('🔒 Admin init - Starting logged OUT');
         
         // Force logout state
         this.isLoggedIn = false;
@@ -53,11 +52,9 @@ const admin = {
             });
         }
         
-        console.log('✅ Admin ready - logged out');
     },
 
     showLoginModal() {
-        console.log('🔐 Showing login modal - isLoggedIn:', this.isLoggedIn);
         
         if (this.isLoggedIn) {
             // Logout
@@ -75,14 +72,10 @@ const admin = {
         if (typeof bootstrap !== 'undefined') {
             const modal = new bootstrap.Modal(modalEl);
             modal.show();
-        } else {
-            console.error('Bootstrap not loaded');
         }
-        console.log('📋 Login modal displayed');
     },
 
     async login(username, password) {
-        console.log('🔑 Login attempt for:', username);
         
         // Check for lockout
         if (this.lockoutTime && Date.now() < this.lockoutTime) {
@@ -132,7 +125,6 @@ const admin = {
             if (typeof ui !== 'undefined') {
                 ui.showNotification('✅ Admin login successful!', 'success');
             }
-            console.log('✅ Admin logged in');
         } else {
             this.handleFailedLogin();
         }
@@ -152,11 +144,9 @@ const admin = {
                 ui.showNotification(`❌ Invalid credentials! ${remaining} attempts remaining.`, 'error');
             }
         }
-        console.log('❌ Login failed');
     },
 
     logout() {
-        console.log('🚪 Logging out');
         
         this.isLoggedIn = false;
         this.isAdminMode = false;
@@ -195,9 +185,8 @@ const admin = {
             // Update admin statistics
             this.updateAdminStats();
             
-            console.log('📊 Admin data loaded:', this.allData.length, 'readings');
+
         } catch (error) {
-            console.error('Error loading admin data:', error);
             this.allData = [];
             this.filteredData = [];
         }
@@ -222,9 +211,8 @@ const admin = {
     }
 };
 
-// Initialize ONLY when DOM is ready
+// Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('📄 DOM ready - initializing admin');
     admin.init();
 });
 

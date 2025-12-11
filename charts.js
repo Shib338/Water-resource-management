@@ -9,7 +9,6 @@ const charts = {
 
     updateCharts(readings) {
         if (!readings || !Array.isArray(readings) || readings.length === 0) {
-            console.log('Clearing all charts');
             this.clearAllCharts();
             return;
         }
@@ -28,7 +27,7 @@ const charts = {
             return;
         }
 
-        console.log('Updating charts with', validReadings.length, 'valid readings');
+
         
         try {
             // Update statistical summary
@@ -44,9 +43,9 @@ const charts = {
             // Update improvement solutions
             this.updateImprovementSolutions(validReadings);
             
-            console.log('✅ All charts updated successfully');
+
         } catch (error) {
-            console.error('Charts update error:', error);
+            // Charts update error handled silently
         }
     },
 
@@ -197,13 +196,7 @@ const charts = {
 
     updateParameterChart(canvasId, readings, parameter, label) {
         const canvas = document.getElementById(canvasId);
-        if (!canvas) {
-            console.warn(`Canvas not found: ${canvasId}`);
-            return;
-        }
-        
-        if (typeof Chart === 'undefined') {
-            console.warn('Chart.js not loaded');
+        if (!canvas || typeof Chart === 'undefined') {
             return;
         }
 
@@ -286,9 +279,9 @@ const charts = {
                 }
             });
             
-            console.log(`✅ Chart created for ${canvasId} with ${data.length} data points`);
+
         } catch (error) {
-            console.error(`Chart creation error for ${canvasId}:`, error);
+            // Chart creation error handled silently
         }
     },
 
@@ -346,7 +339,7 @@ const charts = {
                     const displayValue = gauge.id === 'heavyMetalGauge' ? gauge.value.toFixed(0) : gauge.value.toFixed(1);
                     ctx.fillText(displayValue, canvas.width/2, canvas.height/2 + 5);
                 } catch (error) {
-                    console.error(`Gauge update error for ${gauge.id}:`, error);
+                    // Gauge update error handled silently
                 }
             }
         });
@@ -484,7 +477,6 @@ const charts = {
             </div>
         `;
         } catch (error) {
-            console.error('Statistical summary error:', error);
             if (statsDiv) statsDiv.innerHTML = '<p class="text-danger text-center">Error calculating statistics</p>';
         }
     }
