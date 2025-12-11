@@ -36,19 +36,13 @@ const charts = {
             
             // Update 2 parameter charts
             this.updateParameterChart('phChart', validReadings, 'ph', 'pH Level');
-            this.updateParameterChart('heavyMetalChart', validReadings, 'heavyMetal', 'Lead Concentration (PPM)');
+            this.updateParameterChart('heavyMetalChart', validReadings, 'heavyMetal', 'TDS Concentration (PPM)');
             
             // Update gauges
             this.updateGauges(validReadings);
             
-            // Update quality assessment
-            this.updateQualityAssessment(validReadings);
-            
             // Update improvement solutions
             this.updateImprovementSolutions(validReadings);
-            
-            // Update correlations
-            this.updateCorrelations(validReadings);
             
             console.log('✅ All charts updated successfully');
         } catch (error) {
@@ -78,17 +72,7 @@ const charts = {
             }
         });
         
-        // Clear quality assessment
-        const qualityDiv = document.getElementById('qualityAssessment');
-        if (qualityDiv) {
-            qualityDiv.innerHTML = '<p class="text-muted">No data available</p>';
-        }
-        
-        // Clear correlations
-        const corrDiv = document.getElementById('correlationAnalysis');
-        if (corrDiv) {
-            corrDiv.innerHTML = '<p class="text-muted">No data for correlation analysis</p>';
-        }
+
         
         // Clear statistical summary
         const statsDiv = document.getElementById('statisticalSummary');
@@ -191,7 +175,7 @@ const charts = {
         if (!reading) return 0;
         
         const phScore = (reading.ph >= 6.5 && reading.ph <= 8.5) ? 100 : Math.max(0, 100 - Math.abs(reading.ph - 7) * 20);
-        const hmScore = reading.heavyMetal <= 500 ? 100 : Math.max(0, 100 - (reading.heavyMetal - 500) / 10);
+        const hmScore = (reading.heavyMetal >= 50 && reading.heavyMetal <= 300) ? 100 : Math.max(0, 100 - Math.abs(reading.heavyMetal - 175) / 5);
         
         return Math.round((phScore + hmScore) / 2);
     },
@@ -200,7 +184,7 @@ const charts = {
         if (!reading) return { status: 'Unknown', color: 'secondary', percentage: 0 };
         
         const phSafe = reading.ph >= 6.5 && reading.ph <= 8.5;
-        const hmSafe = reading.heavyMetal <= 500;
+        const hmSafe = reading.heavyMetal >= 50 && reading.heavyMetal <= 300;
         
         if (phSafe && hmSafe) {
             return { status: 'Safe', color: 'success', percentage: 100 };
@@ -231,12 +215,15 @@ const charts = {
                 this.allCharts[canvasId].destroy();
             }
 
-            // Fix: Use readings parameter instead of validReadings
-            const chartReadings = readings.length > 15 ? readings.slice(-15) : readings;
-            const labels = chartReadings.map((r, index) => `#${index + 1}`);
+            // Use all readings for better data visualization
+            const chartReadings = readings.length > 20 ? readings.slice(-20) : readings;
+            const labels = chartReadings.map((r, index) => {
+                const date = new Date(r.timestamp);
+                return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            });
             const data = chartReadings.map(r => {
-                const value = r[parameter];
-                return (typeof value === 'number' && !isNaN(value)) ? value : 0;
+                const value = parseFloat(r[parameter]);
+                return (typeof value === 'number' && !isNaN(value)) ? Number(value.toFixed(2)) : 0;
             });
 
             // Set colors based on parameter type
@@ -264,7 +251,8 @@ const charts = {
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false,
+                    maintainAspectRatio: true,
+                    aspectRatio: 1.8,
                     plugins: {
                         legend: { 
                             display: true,
@@ -277,7 +265,9 @@ const charts = {
                     },
                     scales: {
                         y: { 
-                            beginAtZero: false,
+                            beginAtZero: true,
+                            min: 0,
+                            max: isLeadChart ? 1000 : 14,
                             grid: {
                                 color: 'rgba(0,0,0,0.1)'
                             }
@@ -376,7 +366,7 @@ const charts = {
                 <hr>
                 <div class="mt-3">
                     <p><strong>Average pH:</strong> ${avgPh}</p>
-                    <p><strong>Lead Level:</strong> ${latest.heavyMetal?.toFixed(0)} PPM</p>
+                    <p><strong>TDS Level:</strong> ${latest.heavyMetal?.toFixed(0)} PPM</p>
                     <p><strong>Total Readings:</strong> ${readings.length}</p>
                     <p><strong>Latest:</strong> ${new Date(latest.timestamp).toLocaleString()}</p>
                 </div>
@@ -394,8 +384,8 @@ const charts = {
                 <p class="mb-0"><strong>Solution:</strong> Add lime (calcium carbonate) to increase pH or sulfur to decrease pH. Regular monitoring required.</p>
             </div>
             <div class="alert alert-danger mb-3">
-                <h6 class="alert-heading"><i class="bi bi-shield-x"></i> High Lead Levels (> 500 PPM)</h6>
-                <p class="mb-0"><strong>Solution:</strong> Install lead-specific filtration systems, replace lead pipes, use reverse osmosis or activated carbon filters.</p>
+                <h6 class="alert-heading"><i class="bi bi-shield-x"></i> TDS Levels Outside Safe Range (50-300 PPM)</h6>
+                <p class="mb-0"><strong>Solution:</strong> Install TDS-specific filtration systems, use reverse osmosis or activated carbon filters to maintain optimal dissolved solids range.</p>
             </div>
             <div class="alert alert-info mb-3">
                 <h6 class="alert-heading"><i class="bi bi-droplet"></i> Water Treatment Recommendations</h6>
@@ -433,7 +423,7 @@ const charts = {
             const hmMax = Math.max(...heavyMetalValues).toFixed(0);
             
             const phNormal = phValues.filter(v => v >= 6.5 && v <= 8.5).length;
-            const hmNormal = heavyMetalValues.filter(v => v >= 10 && v <= 500).length;
+            const hmNormal = heavyMetalValues.filter(v => v >= 50 && v <= 300).length;
         
             statsDiv.innerHTML = `
             <div class="row g-4">
@@ -467,7 +457,7 @@ const charts = {
                 <div class="col-md-6">
                     <div class="card border-danger">
                         <div class="card-header bg-danger text-white">
-                            <h6 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Lead Statistics</h6>
+                            <h6 class="mb-0"><i class="bi bi-exclamation-triangle"></i> TDS Statistics</h6>
                         </div>
                         <div class="card-body">
                             <div class="row text-center">

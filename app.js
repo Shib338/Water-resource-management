@@ -14,8 +14,7 @@ const app = {
             this.setupEventListeners();
             this.validateBrowser();
             
-            // Privacy Mode: Clear data on fresh browser session
-            this.handlePrivacyMode();
+
             
             // Load existing data on startup
             this.loadData();
@@ -23,45 +22,24 @@ const app = {
             if (typeof ui !== 'undefined') {
                 ui.showPage('dashboard');
             }
+            // Initialize sensor system
             if (typeof sensor !== 'undefined' && sensor.init) {
+                console.log('🔧 Starting sensor initialization...');
                 sensor.init();
+            } else {
+                console.error('❌ Sensor system not found!');
             }
             
-            console.log('✅ App initialized successfully');
+
         } catch (error) {
             console.error('App initialization error:', error);
         }
     },
     
-    handlePrivacyMode() {
-        try {
-            // Check if this is a fresh browser session
-            const sessionActive = sessionStorage.getItem('waterQualitySession');
-            
-            if (!sessionActive) {
-                // Fresh session - clear all previous data for privacy
-                localStorage.removeItem('waterQualityReadings');
-                console.log('🔒 Privacy mode: Previous session data cleared');
-                
-                // Mark session as active
-                sessionStorage.setItem('waterQualitySession', 'active');
-                
-                // Show privacy notice
-                setTimeout(() => {
-                    if (typeof ui !== 'undefined') {
-                        ui.showNotification('🔒 Privacy Mode: Previous session data cleared for security', 'info');
-                    }
-                }, 2000);
-            }
-        } catch (error) {
-            console.error('Privacy mode error:', error);
-        }
-    },
+
 
     validateBrowser() {
-        if (!('serial' in navigator)) {
-            console.log('USB sensor support requires Chrome or Edge browser.');
-        }
+        // USB sensor support check handled silently
     },
 
     setupEventListeners() {
@@ -114,7 +92,7 @@ const app = {
             if (typeof CONFIG !== 'undefined' && CONFIG.RANGES) {
                 const range = CONFIG.RANGES[param];
                 if (range) {
-                    const isValid = numValue >= range.min && numValue <= range.max;
+                    const isValid = numValue >= range.absoluteMin && numValue <= range.absoluteMax;
                     field.classList.toggle('is-valid', isValid);
                     field.classList.toggle('is-invalid', !isValid);
                     return isValid;
@@ -124,7 +102,6 @@ const app = {
             field.classList.add('is-valid');
             return true;
         } catch (error) {
-            console.error('Validation error:', error);
             return false;
         }
     },
@@ -187,7 +164,6 @@ const app = {
 
             this.addReading(location, values);
         } catch (error) {
-            console.error('Validation error:', error);
             if (typeof ui !== 'undefined') {
                 ui.showNotification('Error validating form data. Please try again.', 'error');
             }
@@ -196,14 +172,27 @@ const app = {
 
     async loadData() {
         try {
-            this.readings = (typeof FirebaseDB !== 'undefined') ? await FirebaseDB.loadReadings() : [];
+            // Check if admin is logged in to determine data visibility
+            const isAdmin = typeof admin !== 'undefined' && admin.isLoggedIn;
             
-            // Filter and sort readings
-            this.readings = this.readings
-                .filter(reading => {
-                    return reading && typeof reading === 'object' && reading.timestamp;
-                })
-                .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            if (isAdmin) {
+                // Admin can see all data
+                this.readings = (typeof FirebaseDB !== 'undefined') ? await FirebaseDB.loadReadings() : [];
+                
+                // Filter out any test data and only keep real user entries
+                this.readings = this.readings
+                    .filter(reading => {
+                        return reading && typeof reading === 'object' && reading.timestamp && 
+                               reading.source !== 'test'; // Exclude any test data
+                    })
+                    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                
+                console.log('📊 Admin loaded', this.readings.length, 'real data readings');
+            } else {
+                // Regular users see no historical data
+                this.readings = [];
+                console.log('📊 Regular user - no historical data loaded');
+            }
             
             const totalEl = document.getElementById('totalReadings');
             if (totalEl) totalEl.textContent = this.readings.length;
@@ -216,9 +205,13 @@ const app = {
                 charts.updateCharts(this.readings);
             }
             
-            console.log('✅ Loaded', this.readings.length, 'readings from storage');
+            // Update admin stats if logged in
+            if (typeof admin !== 'undefined' && admin.isLoggedIn) {
+                admin.updateAdminStats();
+            }
+
         } catch (error) {
-            console.error('Load error:', error);
+            console.error('Load data error:', error);
             this.readings = [];
             if (typeof ui !== 'undefined') {
                 ui.updateDashboard([]);
@@ -228,21 +221,40 @@ const app = {
 
     resetDisplay() {
         try {
-            this.readings = [];
-            const totalEl = document.getElementById('totalReadings');
-            if (totalEl) totalEl.textContent = '0';
-            if (typeof ui !== 'undefined') {
-                ui.updateDashboard([]);
-                ui.showPage('dashboard');
-                ui.showNotification('Display refreshed successfully', 'success');
+            // Check if admin is logged in
+            if (typeof admin !== 'undefined' && admin.isLoggedIn) {
+                // Admin can see all data - reload from database
+                this.loadData();
+                if (typeof ui !== 'undefined') {
+                    ui.showNotification('Admin view: All data refreshed', 'success');
+                }
+            } else {
+                // Regular users see empty display for privacy
+                this.readings = [];
+                const totalEl = document.getElementById('totalReadings');
+                if (totalEl) totalEl.textContent = '0';
+                if (typeof ui !== 'undefined') {
+                    ui.updateDashboard([]);
+                    ui.showPage('dashboard');
+                    ui.showNotification('Display cleared for privacy', 'success');
+                }
+                this.updateReports();
+                if (typeof charts !== 'undefined' && charts.updateCharts) {
+                    charts.updateCharts([]);
+                }
+                // Clear dashboard display completely
+                const latestDetails = document.getElementById('latestDetails');
+                if (latestDetails) {
+                    latestDetails.innerHTML = `
+                        <div class="text-center py-5">
+                            <i class="bi bi-info-circle fs-1 text-muted mb-3"></i>
+                            <h5 class="text-muted">No readings available</h5>
+                            <p class="text-muted">Add data to begin monitoring water quality parameters.</p>
+                        </div>
+                    `;
+                }
             }
-            this.updateReports();
-            if (typeof charts !== 'undefined' && charts.updateCharts) {
-                charts.updateCharts([]);
-            }
-            console.log('🔄 Display cleared - Firebase data intact');
         } catch (error) {
-            console.error('Reset display error:', error);
             if (typeof ui !== 'undefined') {
                 ui.showNotification('Error refreshing display', 'error');
             }
@@ -293,7 +305,6 @@ const app = {
                 }
             }
         } catch (error) {
-            console.error('Error adding reading:', error);
             if (typeof ui !== 'undefined') {
                 ui.showNotification('Error saving reading. Please try again.', 'error');
             }
@@ -378,9 +389,7 @@ const app = {
             if (cleared) {
                 this.readings = [];
                 
-                // Clear both localStorage and sessionStorage for complete privacy
-                localStorage.removeItem('waterQualityReadings');
-                sessionStorage.removeItem('waterQualitySession');
+
                 
                 const totalEl = document.getElementById('totalReadings');
                 if (totalEl) totalEl.textContent = '0';
@@ -392,7 +401,7 @@ const app = {
                     charts.updateCharts([]);
                 }
                 if (typeof ui !== 'undefined') {
-                    ui.showNotification('🗑️ All data permanently deleted - Privacy secured', 'info');
+                    ui.showNotification('🗑️ All data permanently deleted', 'info');
                 }
             } else {
                 if (typeof ui !== 'undefined') {
@@ -402,29 +411,7 @@ const app = {
         }
     },
     
-    enablePrivacyMode() {
-        // Manual privacy mode activation
-        const confirmed = confirm('🔒 Privacy Mode: This will clear all local data and prevent data persistence across browser sessions. Continue?');
-        
-        if (confirmed) {
-            localStorage.removeItem('waterQualityReadings');
-            sessionStorage.removeItem('waterQualitySession');
-            
-            this.readings = [];
-            const totalEl = document.getElementById('totalReadings');
-            if (totalEl) totalEl.textContent = '0';
-            
-            if (typeof ui !== 'undefined') {
-                ui.updateDashboard([]);
-                ui.showNotification('🔒 Privacy Mode Activated - All local data cleared', 'success');
-            }
-            
-            this.updateReports();
-            if (typeof charts !== 'undefined' && charts.updateCharts) {
-                charts.updateCharts([]);
-            }
-        }
-    },
+
 
     getStats() {
         return {
@@ -445,12 +432,19 @@ const app = {
     updateReports() {
         const outputList = document.getElementById('outputList');
         if (outputList) {
-            if (this.readings.length === 0) {
-                outputList.innerHTML = '<div class="alert alert-info"><i class="bi bi-info-circle"></i> No readings available. Add data to see reports.</div>';
+            // Check if admin is logged in to show all data
+            const isAdmin = typeof admin !== 'undefined' && admin.isLoggedIn;
+            const displayReadings = isAdmin ? this.readings : [];
+            
+            if (displayReadings.length === 0) {
+                const message = isAdmin ? 
+                    'No readings available. Add data to see reports.' : 
+                    'Login as admin to view all historical data.';
+                outputList.innerHTML = `<div class="alert alert-info"><i class="bi bi-info-circle"></i> ${message}</div>`;
             } else {
-                let html = `<div class="alert alert-success mb-4"><strong>Total Readings:</strong> ${this.readings.length}</div>`;
+                let html = `<div class="alert alert-success mb-4"><strong>Total Readings:</strong> ${displayReadings.length}</div>`;
                 html += '<div class="row g-3">';
-                this.readings.slice().reverse().forEach(reading => {
+                displayReadings.slice().reverse().forEach(reading => {
                     html += `
                         <div class="col-md-6">
                             <div class="card">
@@ -459,7 +453,7 @@ const app = {
                                     <p class="text-muted small">${new Date(reading.timestamp).toLocaleString()}</p>
                                     <div class="row">
                                         <div class="col-6"><small>pH: ${reading.ph?.toFixed(2)}</small></div>
-                                        <div class="col-6"><small>Lead: ${reading.heavyMetal?.toFixed(0)} PPM</small></div>
+                                        <div class="col-6"><small>Heavy Metal: ${reading.heavyMetal?.toFixed(0)} PPM</small></div>
                                     </div>
                                 </div>
                             </div>
@@ -474,9 +468,11 @@ const app = {
 
     updateAnalytics() {
         if (typeof charts !== 'undefined' && charts.updateCharts) {
-            charts.updateCharts(this.readings);
+            // Only show analytics data to admins
+            const isAdmin = typeof admin !== 'undefined' && admin.isLoggedIn;
+            const displayReadings = isAdmin ? this.readings : [];
+            charts.updateCharts(displayReadings);
         }
-        console.log('✅ Analytics updated with', this.readings.length, 'readings');
     }
 };
 

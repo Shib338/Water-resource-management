@@ -132,7 +132,7 @@ const FirebaseDB = {
     sanitizeNumber(num) {
         const parsed = parseFloat(num);
         if (isNaN(parsed) || !isFinite(parsed)) return null;
-        return Math.max(0, Math.min(parsed, 1000)); // Reasonable bounds
+        return parsed; // Keep original value
     }
 };
 

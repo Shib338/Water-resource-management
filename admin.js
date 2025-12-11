@@ -191,11 +191,33 @@ const admin = {
             if (typeof app !== 'undefined' && app.loadData) {
                 await app.loadData();
             }
+            
+            // Update admin statistics
+            this.updateAdminStats();
+            
             console.log('📊 Admin data loaded:', this.allData.length, 'readings');
         } catch (error) {
             console.error('Error loading admin data:', error);
             this.allData = [];
             this.filteredData = [];
+        }
+    },
+    
+    updateAdminStats() {
+        const totalEl = document.getElementById('totalRecords');
+        const normalEl = document.getElementById('normalRecords');
+        const alertEl = document.getElementById('alertRecords');
+        
+        if (totalEl) totalEl.textContent = this.allData.length;
+        
+        if (normalEl && alertEl) {
+            const normal = this.allData.filter(r => 
+                r.ph >= 6.5 && r.ph <= 8.5 && r.heavyMetal <= 500
+            ).length;
+            const alert = this.allData.length - normal;
+            
+            normalEl.textContent = normal;
+            alertEl.textContent = alert;
         }
     }
 };

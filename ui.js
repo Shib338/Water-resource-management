@@ -52,6 +52,12 @@ const ui = {
     },
 
     showNotification(message, type = 'info') {
+        // Only show essential notifications
+        if (type !== 'error' && type !== 'warning' && type !== 'danger' && 
+            !message.includes('Alert') && !message.includes('saved') && !message.includes('cleared')) {
+            return; // Skip non-essential notifications
+        }
+
         const notification = document.getElementById('notification');
         const icon = document.getElementById('notificationIcon');
         const text = document.getElementById('notificationMessage');
@@ -85,32 +91,11 @@ const ui = {
     updateDashboard(readings) {
         const metricCards = document.getElementById('metricCards');
         const latestDetails = document.getElementById('latestDetails');
-        const nutrientBars = document.getElementById('nutrientBars');
-        const trendChart = document.getElementById('trendChart');
         
         if (readings && readings.length > 0) {
             const latest = readings[readings.length - 1];
             
-            if (metricCards) {
-                metricCards.innerHTML = `
-                    <div class="col-md-6">
-                        <div class="card text-white bg-gradient-primary">
-                            <div class="card-body text-center">
-                                <h3>${latest.ph?.toFixed(2) || 'N/A'}</h3>
-                                <p class="mb-0">pH Level</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="card text-white bg-gradient-danger">
-                            <div class="card-body text-center">
-                                <h3>${latest.heavyMetal?.toFixed(0) || 'N/A'}</h3>
-                                <p class="mb-0">Lead (PPM)</p>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
+
             
             if (latestDetails && latest) {
                 const safeLocation = this.escapeHtml(latest.location || 'Unknown');
@@ -144,7 +129,7 @@ const ui = {
                         <div class="col-md-6">
                             <div class="card border-danger">
                                 <div class="card-body text-center">
-                                    <h6 class="text-muted mb-2">Lead Level</h6>
+                                    <h6 class="text-muted mb-2">Heavy Metal Level</h6>
                                     <h3 class="text-danger mb-0">${latest.heavyMetal?.toFixed(0)} PPM</h3>
                                 </div>
                             </div>
@@ -153,112 +138,9 @@ const ui = {
                 `;
             }
             
-            // Update Lead Analysis
-            if (nutrientBars) {
-                const phPercent = Math.min(Math.max((latest.ph / 14) * 100, 0), 100);
-                const leadPercent = Math.min(Math.max((latest.heavyMetal / 1000) * 100, 0), 100);
-                
-                nutrientBars.innerHTML = `
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between mb-1">
-                            <span><strong>pH Level</strong></span>
-                            <span class="badge ${latest.ph >= 6.5 && latest.ph <= 8.5 ? 'bg-success' : 'bg-warning'}">${latest.ph?.toFixed(2)}</span>
-                        </div>
-                        <div class="progress" style="height: 25px;">
-                            <div class="progress-bar ${latest.ph >= 6.5 && latest.ph <= 8.5 ? 'bg-success' : 'bg-warning'}" style="width: ${phPercent}%">
-                                ${latest.ph?.toFixed(2)}
-                            </div>
-                        </div>
-                        <small class="text-muted">Normal range: 6.5 - 8.5</small>
-                    </div>
-                    <div class="mb-0">
-                        <div class="d-flex justify-content-between mb-1">
-                            <span><strong>Lead Level</strong></span>
-                            <span class="badge ${latest.heavyMetal <= 500 ? 'bg-success' : 'bg-danger'}">${latest.heavyMetal?.toFixed(0)} PPM</span>
-                        </div>
-                        <div class="progress" style="height: 25px;">
-                            <div class="progress-bar ${latest.heavyMetal <= 500 ? 'bg-success' : 'bg-danger'}" style="width: ${leadPercent}%">
-                                ${latest.heavyMetal?.toFixed(0)} PPM
-                            </div>
-                        </div>
-                        <small class="text-muted">Safe limit: ≤ 500 PPM</small>
-                    </div>
-                `;
-            }
-            
-            // Update Parameter Trends Chart
-            if (trendChart && typeof Chart !== 'undefined') {
-                try {
-                    const ctx = trendChart.getContext('2d');
-                    if (window.dashboardTrendChart) {
-                        window.dashboardTrendChart.destroy();
-                    }
-                    
-                    // Show more readings for better trend visualization
-                    const chartReadings = readings.length > 15 ? readings.slice(-15) : readings;
-                    const labels = chartReadings.map((r, index) => `Reading ${index + 1}`);
-                    const phData = chartReadings.map(r => r.ph || 0);
-                    const heavyMetalData = chartReadings.map(r => r.heavyMetal || 0);
-                    
-                    window.dashboardTrendChart = new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: labels,
-                            datasets: [
-                                {
-                                    label: 'pH Level',
-                                    data: phData,
-                                    borderColor: '#667eea',
-                                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                                    tension: 0.4,
-                                    fill: true
-                                },
-                                {
-                                    label: 'Lead (PPM)',
-                                    data: heavyMetalData,
-                                    borderColor: '#dc3545',
-                                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                                    tension: 0.4,
-                                    fill: true
-                                }
-                            ]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: { display: true }
-                            },
-                            scales: {
-                                y: { beginAtZero: false }
-                            }
-                        }
-                    });
-                } catch (error) {
-                    console.error('Chart creation error:', error);
-                }
-            }
+
         } else {
-            if (metricCards) {
-                metricCards.innerHTML = `
-                    <div class="col-md-6">
-                        <div class="card text-white bg-gradient-secondary">
-                            <div class="card-body text-center">
-                                <h3>--</h3>
-                                <p class="mb-0">pH Level</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="card text-white bg-gradient-secondary">
-                            <div class="card-body text-center">
-                                <h3>--</h3>
-                                <p class="mb-0">Lead (PPM)</p>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
+
             if (latestDetails) {
                 latestDetails.innerHTML = `
                     <div class="alert alert-info text-center">
@@ -268,19 +150,7 @@ const ui = {
                     </div>
                 `;
             }
-            if (nutrientBars) {
-                nutrientBars.innerHTML = `
-                    <div class="text-center text-muted">
-                        <i class="bi bi-graph-up fs-1 mb-3"></i>
-                        <p>Parameter analysis will appear here after adding data</p>
-                    </div>
-                `;
-            }
-            // Clear existing chart
-            if (window.dashboardTrendChart) {
-                window.dashboardTrendChart.destroy();
-                window.dashboardTrendChart = null;
-            }
+
         }
     },
 
@@ -292,3 +162,4 @@ const ui = {
 };
 
 document.addEventListener('DOMContentLoaded', () => ui.init());
+window.ui = ui;
