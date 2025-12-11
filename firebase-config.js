@@ -10,10 +10,9 @@ const firebaseConfig = {
     apiKey: "AIzaSyCLVGuidDrlvPe_mQzpt-0h7tT6es17WII",
     authDomain: "water-resource-managemen-e9556.firebaseapp.com",
     projectId: "water-resource-managemen-e9556",
-    storageBucket: "water-resource-managemen-e9556.firebasestorage.app",
+    storageBucket: "water-resource-managemen-e9556.appspot.com",
     messagingSenderId: "637624967246",
-    appId: "1:637624967246:web:6e3979bbb0931e1f0de31f",
-    measurementId: "G-92MZ6DL486"
+    appId: "1:637624967246:web:6e3979bbb0931e1f0de31f"
 };
 
 // Initialize Firebase
@@ -21,15 +20,17 @@ let db = null;
 let isFirebaseEnabled = false;
 
 try {
-    // Check if config is set
-    if (firebaseConfig.apiKey !== "YOUR_API_KEY_HERE") {
-        firebase.initializeApp(firebaseConfig);
-        db = firebase.firestore();
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    
+    // Test connection
+    db.enableNetwork().then(() => {
         isFirebaseEnabled = true;
         console.log('✅ Firebase connected - Cloud storage active');
-    } else {
-        console.log('⚠️ Firebase not configured - Using localStorage fallback');
-    }
+    }).catch((error) => {
+        console.warn('Firebase network error:', error);
+        console.log('⚠️ Using localStorage fallback');
+    });
 } catch (error) {
     console.error('Firebase initialization error:', error);
     console.log('⚠️ Using localStorage fallback');
@@ -64,15 +65,17 @@ const FirebaseDB = {
 
         try {
             const snapshot = await db.collection('waterQualityReadings')
-                .orderBy('timestamp', 'desc')
+                .orderBy('createdAt', 'desc')
                 .limit(1000)
                 .get();
 
             const readings = [];
             snapshot.forEach(doc => {
+                const data = doc.data();
                 readings.push({
                     id: doc.id,
-                    ...doc.data()
+                    ...data,
+                    timestamp: data.createdAt ? data.createdAt.toDate().toISOString() : new Date().toISOString()
                 });
             });
 
