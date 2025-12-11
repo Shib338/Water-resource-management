@@ -13,7 +13,7 @@ const CONFIG = Object.freeze({
     
     RANGES: Object.freeze({
         ph: Object.freeze({ min: 6.5, max: 8.5, unit: '', absoluteMin: 0, absoluteMax: 14 }),
-        heavyMetal: Object.freeze({ min: 0.01, max: 0.5, unit: 'mg/L', absoluteMin: 0, absoluteMax: 1000 })
+        heavyMetal: Object.freeze({ min: 10, max: 500, unit: 'PPM', absoluteMin: 0, absoluteMax: 10000 })
     }),
     
     VALIDATION: Object.freeze({

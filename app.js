@@ -402,7 +402,7 @@ const app = {
                                     <p class="text-muted small">${new Date(reading.timestamp).toLocaleString()}</p>
                                     <div class="row">
                                         <div class="col-6"><small>pH: ${reading.ph?.toFixed(2)}</small></div>
-                                        <div class="col-6"><small>Heavy Metal: ${reading.heavyMetal?.toFixed(3)} mg/L</small></div>
+                                        <div class="col-6"><small>Lead: ${reading.heavyMetal?.toFixed(0)} PPM</small></div>
                                     </div>
                                 </div>
                             </div>

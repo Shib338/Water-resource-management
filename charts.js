@@ -35,7 +35,7 @@ const charts = {
         
         // Update 2 parameter charts
         this.updateParameterChart('phChart', validReadings, 'ph', 'pH Level');
-        this.updateParameterChart('heavyMetalChart', validReadings, 'heavyMetal', 'Heavy Metal (mg/L)');
+        this.updateParameterChart('heavyMetalChart', validReadings, 'heavyMetal', 'Lead Concentration (PPM)');
         
         // Update gauges
         this.updateGauges(validReadings);
@@ -181,7 +181,7 @@ const charts = {
         if (!reading) return 0;
         
         const phScore = (reading.ph >= 6.5 && reading.ph <= 8.5) ? 100 : Math.max(0, 100 - Math.abs(reading.ph - 7) * 20);
-        const hmScore = reading.heavyMetal <= 0.5 ? 100 : Math.max(0, 100 - (reading.heavyMetal - 0.5) * 200);
+        const hmScore = reading.heavyMetal <= 500 ? 100 : Math.max(0, 100 - (reading.heavyMetal - 500) / 10);
         
         return Math.round((phScore + hmScore) / 2);
     },
@@ -190,7 +190,7 @@ const charts = {
         if (!reading) return { status: 'Unknown', color: 'secondary', percentage: 0 };
         
         const phSafe = reading.ph >= 6.5 && reading.ph <= 8.5;
-        const hmSafe = reading.heavyMetal <= 0.5;
+        const hmSafe = reading.heavyMetal <= 500;
         
         if (phSafe && hmSafe) {
             return { status: 'Safe', color: 'success', percentage: 100 };
@@ -265,7 +265,7 @@ const charts = {
         
         const gauges = [
             { id: 'phGauge', value: latest.ph || 0, max: 14 },
-            { id: 'heavyMetalGauge', value: latest.heavyMetal || 0, max: 0.5 }
+            { id: 'heavyMetalGauge', value: latest.heavyMetal || 0, max: 500 }
         ];
         
         gauges.forEach(gauge => {
@@ -299,7 +299,7 @@ const charts = {
                 <hr>
                 <div class="mt-3">
                     <p><strong>Average pH:</strong> ${avgPh}</p>
-                    <p><strong>Heavy Metal Level:</strong> ${latest.heavyMetal?.toFixed(3)} mg/L</p>
+                    <p><strong>Lead Level:</strong> ${latest.heavyMetal?.toFixed(0)} PPM</p>
                     <p><strong>Total Readings:</strong> ${readings.length}</p>
                     <p><strong>Latest:</strong> ${new Date(latest.timestamp).toLocaleString()}</p>
                 </div>
@@ -317,8 +317,8 @@ const charts = {
                 <p class="mb-0"><strong>Solution:</strong> Add lime (calcium carbonate) to increase pH or sulfur to decrease pH. Regular monitoring required.</p>
             </div>
             <div class="alert alert-danger mb-3">
-                <h6 class="alert-heading"><i class="bi bi-shield-x"></i> High Heavy Metal Levels (> 0.5 mg/L)</h6>
-                <p class="mb-0"><strong>Solution:</strong> Use activated carbon filters, ion exchange systems, or reverse osmosis. Consider coagulation and flocculation treatment.</p>
+                <h6 class="alert-heading"><i class="bi bi-shield-x"></i> High Lead Levels (> 500 PPM)</h6>
+                <p class="mb-0"><strong>Solution:</strong> Install lead-specific filtration systems, replace lead pipes, use reverse osmosis or activated carbon filters.</p>
             </div>
             <div class="alert alert-info mb-3">
                 <h6 class="alert-heading"><i class="bi bi-droplet"></i> Water Treatment Recommendations</h6>
@@ -351,12 +351,12 @@ const charts = {
             const phMin = Math.min(...phValues).toFixed(2);
             const phMax = Math.max(...phValues).toFixed(2);
             
-            const hmAvg = (heavyMetalValues.reduce((a, b) => a + b, 0) / heavyMetalValues.length).toFixed(3);
-            const hmMin = Math.min(...heavyMetalValues).toFixed(3);
-            const hmMax = Math.max(...heavyMetalValues).toFixed(3);
+            const hmAvg = (heavyMetalValues.reduce((a, b) => a + b, 0) / heavyMetalValues.length).toFixed(0);
+            const hmMin = Math.min(...heavyMetalValues).toFixed(0);
+            const hmMax = Math.max(...heavyMetalValues).toFixed(0);
             
             const phNormal = phValues.filter(v => v >= 6.5 && v <= 8.5).length;
-            const hmNormal = heavyMetalValues.filter(v => v >= 0.01 && v <= 0.5).length;
+            const hmNormal = heavyMetalValues.filter(v => v >= 10 && v <= 500).length;
         
             statsDiv.innerHTML = `
             <div class="row g-4">
@@ -390,21 +390,21 @@ const charts = {
                 <div class="col-md-6">
                     <div class="card border-danger">
                         <div class="card-header bg-danger text-white">
-                            <h6 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Heavy Metal Statistics</h6>
+                            <h6 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Lead Statistics</h6>
                         </div>
                         <div class="card-body">
                             <div class="row text-center">
                                 <div class="col-4">
                                     <h5 class="text-primary">${hmAvg}</h5>
-                                    <small class="text-muted">Average (mg/L)</small>
+                                    <small class="text-muted">Average (PPM)</small>
                                 </div>
                                 <div class="col-4">
                                     <h5 class="text-success">${hmMin}</h5>
-                                    <small class="text-muted">Minimum (mg/L)</small>
+                                    <small class="text-muted">Minimum (PPM)</small>
                                 </div>
                                 <div class="col-4">
                                     <h5 class="text-danger">${hmMax}</h5>
-                                    <small class="text-muted">Maximum (mg/L)</small>
+                                    <small class="text-muted">Maximum (PPM)</small>
                                 </div>
                             </div>
                             <hr>

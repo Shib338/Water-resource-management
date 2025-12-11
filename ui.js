@@ -104,8 +104,8 @@ const ui = {
                     <div class="col-md-6">
                         <div class="card text-white bg-gradient-danger">
                             <div class="card-body text-center">
-                                <h3>${latest.heavyMetal?.toFixed(3) || 'N/A'}</h3>
-                                <p class="mb-0">Heavy Metal (mg/L)</p>
+                                <h3>${latest.heavyMetal?.toFixed(0) || 'N/A'}</h3>
+                                <p class="mb-0">Lead (PPM)</p>
                             </div>
                         </div>
                     </div>
@@ -144,8 +144,8 @@ const ui = {
                         <div class="col-md-6">
                             <div class="card border-danger">
                                 <div class="card-body text-center">
-                                    <h6 class="text-muted mb-2">Heavy Metal</h6>
-                                    <h3 class="text-danger mb-0">${latest.heavyMetal?.toFixed(3)} mg/L</h3>
+                                    <h6 class="text-muted mb-2">Lead Level</h6>
+                                    <h3 class="text-danger mb-0">${latest.heavyMetal?.toFixed(0)} PPM</h3>
                                 </div>
                             </div>
                         </div>
@@ -167,11 +167,11 @@ const ui = {
                     </div>
                     <div class="mb-0">
                         <div class="d-flex justify-content-between mb-1">
-                            <span><strong>Heavy Metal</strong></span>
-                            <span>${latest.heavyMetal?.toFixed(3)} mg/L</span>
+                            <span><strong>Lead Level</strong></span>
+                            <span>${latest.heavyMetal?.toFixed(0)} PPM</span>
                         </div>
                         <div class="progress" style="height: 25px;">
-                            <div class="progress-bar bg-danger" style="width: ${(latest.heavyMetal / 0.5) * 100}%">${latest.heavyMetal?.toFixed(3)}</div>
+                            <div class="progress-bar bg-danger" style="width: ${Math.min((latest.heavyMetal / 500) * 100, 100)}%">${latest.heavyMetal?.toFixed(0)}</div>
                         </div>
                     </div>
                 `;
@@ -205,7 +205,7 @@ const ui = {
                                     fill: true
                                 },
                                 {
-                                    label: 'Heavy Metal (mg/L)',
+                                    label: 'Lead (PPM)',
                                     data: heavyMetalData,
                                     borderColor: '#dc3545',
                                     backgroundColor: 'rgba(220, 53, 69, 0.1)',

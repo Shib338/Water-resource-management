@@ -215,7 +215,7 @@ const sensor = {
                 return {
                     ph: Math.round(ph * 100) / 100,
                     status: status,
-                    heavyMetal: Math.round((Math.random() * 0.4 + 0.1) * 1000) / 1000
+                    heavyMetal: Math.round(Math.random() * 400 + 100) // 100-500 PPM range
                 };
             }
         } catch (error) {
