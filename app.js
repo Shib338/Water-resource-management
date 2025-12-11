@@ -14,6 +14,9 @@ const app = {
             this.setupEventListeners();
             this.validateBrowser();
             
+            // Privacy Mode: Clear data on fresh browser session
+            this.handlePrivacyMode();
+            
             // Load existing data on startup
             this.loadData();
             
@@ -27,6 +30,31 @@ const app = {
             console.log('✅ App initialized successfully');
         } catch (error) {
             console.error('App initialization error:', error);
+        }
+    },
+    
+    handlePrivacyMode() {
+        try {
+            // Check if this is a fresh browser session
+            const sessionActive = sessionStorage.getItem('waterQualitySession');
+            
+            if (!sessionActive) {
+                // Fresh session - clear all previous data for privacy
+                localStorage.removeItem('waterQualityReadings');
+                console.log('🔒 Privacy mode: Previous session data cleared');
+                
+                // Mark session as active
+                sessionStorage.setItem('waterQualitySession', 'active');
+                
+                // Show privacy notice
+                setTimeout(() => {
+                    if (typeof ui !== 'undefined') {
+                        ui.showNotification('🔒 Privacy Mode: Previous session data cleared for security', 'info');
+                    }
+                }, 2000);
+            }
+        } catch (error) {
+            console.error('Privacy mode error:', error);
         }
     },
 
@@ -349,6 +377,11 @@ const app = {
             const cleared = (typeof FirebaseDB !== 'undefined') ? await FirebaseDB.clearAllData() : false;
             if (cleared) {
                 this.readings = [];
+                
+                // Clear both localStorage and sessionStorage for complete privacy
+                localStorage.removeItem('waterQualityReadings');
+                sessionStorage.removeItem('waterQualitySession');
+                
                 const totalEl = document.getElementById('totalReadings');
                 if (totalEl) totalEl.textContent = '0';
                 if (typeof ui !== 'undefined') {
@@ -359,12 +392,36 @@ const app = {
                     charts.updateCharts([]);
                 }
                 if (typeof ui !== 'undefined') {
-                    ui.showNotification('🗑️ All data permanently deleted from Firebase', 'info');
+                    ui.showNotification('🗑️ All data permanently deleted - Privacy secured', 'info');
                 }
             } else {
                 if (typeof ui !== 'undefined') {
                     ui.showNotification('Error deleting data from Firebase', 'error');
                 }
+            }
+        }
+    },
+    
+    enablePrivacyMode() {
+        // Manual privacy mode activation
+        const confirmed = confirm('🔒 Privacy Mode: This will clear all local data and prevent data persistence across browser sessions. Continue?');
+        
+        if (confirmed) {
+            localStorage.removeItem('waterQualityReadings');
+            sessionStorage.removeItem('waterQualitySession');
+            
+            this.readings = [];
+            const totalEl = document.getElementById('totalReadings');
+            if (totalEl) totalEl.textContent = '0';
+            
+            if (typeof ui !== 'undefined') {
+                ui.updateDashboard([]);
+                ui.showNotification('🔒 Privacy Mode Activated - All local data cleared', 'success');
+            }
+            
+            this.updateReports();
+            if (typeof charts !== 'undefined' && charts.updateCharts) {
+                charts.updateCharts([]);
             }
         }
     },

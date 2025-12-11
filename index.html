@@ -56,6 +56,11 @@
                             <i class="bi bi-arrow-clockwise"></i> Refresh
                         </button>
                     </li>
+                    <li class="nav-item ms-2">
+                        <button class="btn btn-warning btn-sm" onclick="app.enablePrivacyMode();" title="Clear all local data for privacy">
+                            <i class="bi bi-shield-lock"></i> Privacy
+                        </button>
+                    </li>
                     <li class="nav-item ms-3">
                         <button class="btn btn-outline-light btn-sm" id="adminBtn">
                             <i class="bi bi-shield-lock"></i> <span id="adminText">Admin</span>
@@ -81,7 +86,7 @@
         <!-- Dashboard Page -->
         <div id="dashboard-page" class="page-content active">
             <div class="alert alert-info alert-dismissible fade show shadow-sm">
-                <i class="bi bi-info-circle"></i> <strong>System Status:</strong> Water quality monitoring system active.
+                <i class="bi bi-shield-check"></i> <strong>Privacy Mode Active:</strong> Data is cleared on browser restart for security.
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
 
