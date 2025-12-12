@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>USB Sensor Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        button { padding: 10px 20px; margin: 5px; }
+        #output { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <h2>USB Sensor Connection Test</h2>
+    
+    <button onclick="testConnection()">Test Connection</button>
+    <button onclick="clearOutput()">Clear</button>
+    
+    <div id="output"></div>
+    
+    <script>
+        let port = null;
+        
+        function log(message) {
+            const output = document.getElementById('output');
+            output.innerHTML += new Date().toLocaleTimeString() + ': ' + message + '<br>';
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        async function testConnection() {
+            try {
+                if (!('serial' in navigator)) {
+                    log('❌ Web Serial API not supported. Use Chrome or Edge.');
+                    return;
+                }
+                
+                log('🔌 Requesting USB port...');
+                port = await navigator.serial.requestPort();
+                
+                log('📡 Opening connection...');
+                await port.open({ baudRate: 9600 });
+                
+                log('✅ Connected successfully!');
+                log('📊 Reading data for 10 seconds...');
+                
+                const reader = port.readable.getReader();
+                const startTime = Date.now();
+                let dataCount = 0;
+                
+                while ((Date.now() - startTime) < 10000) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    
+                    const text = new TextDecoder().decode(value);
+                    dataCount++;
+                    log(`Data ${dataCount}: "${text.trim()}"`);
+                }
+                
+                reader.releaseLock();
+                await port.close();
+                log(`✅ Test complete. Received ${dataCount} data chunks.`);
+                
+            } catch (error) {
+                log('❌ Error: ' + error.message);
+            }
+        }
+        
+        function clearOutput() {
+            document.getElementById('output').innerHTML = '';
+        }
+    </script>
+</body>
+</html>

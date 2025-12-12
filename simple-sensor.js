@@ -104,9 +104,7 @@ const sensor = {
                     if (statusDiv) statusDiv.innerHTML = '<i class="bi bi-x-circle text-danger"></i> Disconnect failed: ' + error.message;
                 }
             };
-
-
-
+        }
 
         if (readBtn) {
             readBtn.onclick = async () => {
@@ -119,7 +117,7 @@ const sensor = {
 
                 if (this.isReading) {
                     this.stopReading();
-                    readBtn.innerHTML = '<i class="bi bi-download"></i> Start Reading';
+                    readBtn.innerHTML = '<i class="bi bi-download"></i> Read Data';
                     readBtn.classList.remove('btn-danger');
                     readBtn.classList.add('btn-success');
                 } else {
@@ -129,10 +127,10 @@ const sensor = {
                     readBtn.classList.add('btn-danger');
                 }
             };
-
+        }
         
         // Retry if buttons missing
-        if (!connectBtn || !readBtn || !disconnectBtn || !liveBtn) {
+        if (!connectBtn || !readBtn || !disconnectBtn) {
             setTimeout(() => this.setupButtons(), 1000);
         }
     },
@@ -303,8 +301,6 @@ const sensor = {
         if (hmField && data.heavyMetal) {
             hmField.value = data.heavyMetal.toFixed(1);
         }
-        
-
     },
 
     testFill() {
@@ -520,9 +516,14 @@ const sensor = {
     }
 };
 
-// Add test button to HTML if needed
+// Initialize sensor when DOM is ready
 if (typeof window !== 'undefined') {
     window.sensor = sensor;
+    
+    // Initialize sensor system
+    document.addEventListener('DOMContentLoaded', () => {
+        sensor.init();
+    });
     
     // Add debug functions to window for console access
     window.testArduinoFormats = () => sensor.testArduinoFormats();

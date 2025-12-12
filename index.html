@@ -147,6 +147,23 @@
                                                 <i class="bi bi-broadcast"></i> Live Monitor
                                             </button>
                                         </div>
+                                    </div>
+                                    <div class="row g-2 mt-2">
+                                        <div class="col-md-4">
+                                            <button class="btn btn-outline-secondary w-100" onclick="sensor.testFill()">
+                                                <i class="bi bi-lightning"></i> Test Fill
+                                            </button>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <button class="btn btn-outline-info w-100" onclick="sensor.simulateReading()">
+                                                <i class="bi bi-cpu"></i> Simulate
+                                            </button>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <button class="btn btn-outline-warning w-100" onclick="sensor.testArduinoFormats()">
+                                                <i class="bi bi-code"></i> Test Formats
+                                            </button>
+                                        </div>
                                         <div class="col-12">
                                             <div id="sensorStatus" class="text-center p-3 bg-light rounded shadow-sm">
                                                 <i class="bi bi-usb text-muted"></i> Ready to connect
