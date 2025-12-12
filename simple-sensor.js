@@ -516,14 +516,94 @@ const sensor = {
     }
 };
 
-// Initialize sensor when DOM is ready
+// Initialize sensor immediately
 if (typeof window !== 'undefined') {
     window.sensor = sensor;
     
-    // Initialize sensor system
-    document.addEventListener('DOMContentLoaded', () => {
-        sensor.init();
-    });
+    // Global functions for button clicks
+    window.connectUSB = async () => {
+        const statusDiv = document.getElementById('sensorStatus');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const readBtn = document.getElementById('readBtn');
+        const liveBtn = document.getElementById('liveBtn');
+        
+        try {
+            if (!('serial' in navigator)) {
+                alert('Web Serial API not supported. Use Chrome or Edge browser.');
+                if (statusDiv) statusDiv.innerHTML = '<i class="bi bi-x-circle text-danger"></i> Not supported';
+                return;
+            }
+
+            sensor.port = await navigator.serial.requestPort();
+            await sensor.port.open({ baudRate: 9600 });
+            
+            sensor.isConnected = true;
+            connectBtn.disabled = true;
+            connectBtn.classList.remove('btn-outline-primary');
+            connectBtn.classList.add('btn-success');
+            connectBtn.innerHTML = '<i class="bi bi-check-circle"></i> Connected';
+            
+            if (disconnectBtn) disconnectBtn.disabled = false;
+            if (readBtn) readBtn.disabled = false;
+            if (liveBtn) liveBtn.disabled = false;
+            if (statusDiv) statusDiv.innerHTML = '<i class="bi bi-check-circle text-success"></i> Connected! Ready to read data';
+            
+        } catch (error) {
+            if (statusDiv) statusDiv.innerHTML = '<i class="bi bi-x-circle text-danger"></i> Failed: ' + error.message;
+        }
+    };
+    
+    window.disconnectUSB = async () => {
+        const statusDiv = document.getElementById('sensorStatus');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const readBtn = document.getElementById('readBtn');
+        const liveBtn = document.getElementById('liveBtn');
+        
+        try {
+            sensor.stopReading();
+            if (sensor.port) await sensor.port.close();
+            
+            sensor.isConnected = false;
+            sensor.port = null;
+            
+            connectBtn.disabled = false;
+            connectBtn.classList.remove('btn-success');
+            connectBtn.classList.add('btn-outline-primary');
+            connectBtn.innerHTML = '<i class="bi bi-usb-plug"></i> Connect';
+            
+            disconnectBtn.disabled = true;
+            if (readBtn) readBtn.disabled = true;
+            if (liveBtn) liveBtn.disabled = true;
+            if (statusDiv) statusDiv.innerHTML = '<i class="bi bi-usb text-muted"></i> Disconnected';
+            
+        } catch (error) {
+            if (statusDiv) statusDiv.innerHTML = '<i class="bi bi-x-circle text-danger"></i> Error: ' + error.message;
+        }
+    };
+    
+    window.readUSBData = async () => {
+        if (!sensor.isConnected) {
+            alert('Connect sensor first!');
+            return;
+        }
+        
+        const readBtn = document.getElementById('readBtn');
+        const statusDiv = document.getElementById('sensorStatus');
+        
+        if (sensor.isReading) {
+            sensor.stopReading();
+            readBtn.innerHTML = '<i class="bi bi-download"></i> Read Data';
+            readBtn.classList.remove('btn-danger');
+            readBtn.classList.add('btn-success');
+        } else {
+            sensor.startContinuousReading(statusDiv, readBtn);
+            readBtn.innerHTML = '<i class="bi bi-stop-circle"></i> Stop';
+            readBtn.classList.remove('btn-success');
+            readBtn.classList.add('btn-danger');
+        }
+    };
     
     // Add debug functions to window for console access
     window.testArduinoFormats = () => sensor.testArduinoFormats();

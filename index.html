@@ -128,17 +128,17 @@
                                     </div>
                                     <div class="row g-3">
                                         <div class="col-md-3">
-                                            <button id="connectBtn" class="btn btn-outline-primary w-100 btn-lg shadow-sm">
+                                            <button id="connectBtn" class="btn btn-outline-primary w-100 btn-lg shadow-sm" onclick="connectUSB()">
                                                 <i class="bi bi-usb-plug"></i> Connect
                                             </button>
                                         </div>
                                         <div class="col-md-3">
-                                            <button id="disconnectBtn" class="btn btn-outline-danger w-100 btn-lg shadow-sm" disabled>
+                                            <button id="disconnectBtn" class="btn btn-outline-danger w-100 btn-lg shadow-sm" disabled onclick="disconnectUSB()">
                                                 <i class="bi bi-usb-plug-fill"></i> Disconnect
                                             </button>
                                         </div>
                                         <div class="col-md-3">
-                                            <button id="readBtn" class="btn btn-success w-100 btn-lg shadow-sm" disabled>
+                                            <button id="readBtn" class="btn btn-success w-100 btn-lg shadow-sm" disabled onclick="readUSBData()">
                                                 <i class="bi bi-download"></i> Read Data
                                             </button>
                                         </div>
