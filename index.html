@@ -128,7 +128,7 @@
                                     </div>
                                     <div class="row g-3">
                                         <div class="col-md-3">
-                                            <button id="connectBtn" class="btn btn-outline-primary w-100 btn-lg shadow-sm" onclick="connectUSB()">
+                                            <button id="connectBtn" class="btn btn-outline-primary w-100 btn-lg shadow-sm" onclick="alert('Button clicked! Checking USB...'); connectUSB();">
                                                 <i class="bi bi-usb-plug"></i> Connect
                                             </button>
                                         </div>
@@ -160,8 +160,8 @@
                                             </button>
                                         </div>
                                         <div class="col-md-4">
-                                            <button class="btn btn-outline-warning w-100" onclick="sensor.testArduinoFormats()">
-                                                <i class="bi bi-code"></i> Test Formats
+                                            <button class="btn btn-outline-warning w-100" onclick="testWebSerial()">
+                                                <i class="bi bi-code"></i> Test API
                                             </button>
                                         </div>
                                         <div class="col-12">

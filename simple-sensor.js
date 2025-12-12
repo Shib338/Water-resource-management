@@ -522,35 +522,52 @@ if (typeof window !== 'undefined') {
     
     // Global functions for button clicks
     window.connectUSB = async () => {
-        const statusDiv = document.getElementById('sensorStatus');
-        const connectBtn = document.getElementById('connectBtn');
-        const disconnectBtn = document.getElementById('disconnectBtn');
-        const readBtn = document.getElementById('readBtn');
-        const liveBtn = document.getElementById('liveBtn');
+        console.log('connectUSB function called');
         
         try {
-            if (!('serial' in navigator)) {
-                alert('Web Serial API not supported. Use Chrome or Edge browser.');
-                if (statusDiv) statusDiv.innerHTML = '<i class="bi bi-x-circle text-danger"></i> Not supported';
+            if (!navigator.serial) {
+                alert('Web Serial API not supported. Use Chrome or Edge browser with HTTPS.');
                 return;
             }
 
-            sensor.port = await navigator.serial.requestPort();
-            await sensor.port.open({ baudRate: 9600 });
+            console.log('Requesting USB port...');
+            const port = await navigator.serial.requestPort();
+            console.log('Port selected, opening connection...');
             
-            sensor.isConnected = true;
-            connectBtn.disabled = true;
-            connectBtn.classList.remove('btn-outline-primary');
-            connectBtn.classList.add('btn-success');
-            connectBtn.innerHTML = '<i class="bi bi-check-circle"></i> Connected';
+            await port.open({ baudRate: 9600 });
+            console.log('Port opened successfully');
             
+            // Update UI
+            const connectBtn = document.getElementById('connectBtn');
+            const statusDiv = document.getElementById('sensorStatus');
+            
+            if (connectBtn) {
+                connectBtn.disabled = true;
+                connectBtn.innerHTML = '<i class="bi bi-check-circle"></i> Connected';
+                connectBtn.className = 'btn btn-success w-100 btn-lg shadow-sm';
+            }
+            
+            if (statusDiv) {
+                statusDiv.innerHTML = '<i class="bi bi-check-circle text-success"></i> USB Connected!';
+            }
+            
+            // Enable other buttons
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            const readBtn = document.getElementById('readBtn');
             if (disconnectBtn) disconnectBtn.disabled = false;
             if (readBtn) readBtn.disabled = false;
-            if (liveBtn) liveBtn.disabled = false;
-            if (statusDiv) statusDiv.innerHTML = '<i class="bi bi-check-circle text-success"></i> Connected! Ready to read data';
+            
+            sensor.port = port;
+            sensor.isConnected = true;
             
         } catch (error) {
-            if (statusDiv) statusDiv.innerHTML = '<i class="bi bi-x-circle text-danger"></i> Failed: ' + error.message;
+            console.error('USB connection error:', error);
+            alert('Connection failed: ' + error.message);
+            
+            const statusDiv = document.getElementById('sensorStatus');
+            if (statusDiv) {
+                statusDiv.innerHTML = '<i class="bi bi-x-circle text-danger"></i> Failed: ' + error.message;
+            }
         }
     };
     
@@ -602,6 +619,19 @@ if (typeof window !== 'undefined') {
             readBtn.innerHTML = '<i class="bi bi-stop-circle"></i> Stop';
             readBtn.classList.remove('btn-success');
             readBtn.classList.add('btn-danger');
+        }
+    };
+    
+    // Test Web Serial API availability
+    window.testWebSerial = () => {
+        const statusDiv = document.getElementById('sensorStatus');
+        
+        if (!navigator.serial) {
+            alert('❌ Web Serial API NOT supported\n\nRequirements:\n- Chrome or Edge browser\n- HTTPS connection\n- Enable experimental features');
+            if (statusDiv) statusDiv.innerHTML = '<i class="bi bi-x-circle text-danger"></i> Web Serial API not supported';
+        } else {
+            alert('✅ Web Serial API is supported!\n\nYou can now connect USB devices.');
+            if (statusDiv) statusDiv.innerHTML = '<i class="bi bi-check-circle text-success"></i> Web Serial API ready';
         }
     };
     
